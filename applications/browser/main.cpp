@@ -1,7 +1,7 @@
 #include <QCoreApplication>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
-#include <QtWebEngineQuick/QtWebEngineQuick>
+#include <QtWebEngineQuick/qtwebenginequickglobal.h>
 int main(int argc, char **argv) {
     QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
     QtWebEngineQuick::initialize();

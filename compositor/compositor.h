@@ -2,6 +2,7 @@
 #include <QWaylandCompositor>
 #include <QWaylandXdgShell>
 #include <QWaylandOutput>
+#include <QWaylandSeat>
 #include <QWaylandQuickShellSurfaceItem>
 #include <QQuickWindow>
 #include <QQmlEngine>
@@ -40,6 +41,8 @@ signals:
     void windowRemoved(WindowSurface *window);
     void activeWindowChanged(WindowSurface *window);
     void workspaceChanged(int workspace);
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
 private slots:
     void onNewToplevel(QWaylandXdgToplevel *toplevel, QWaylandXdgSurface *surface);
     void onToplevelDestroyed();
@@ -47,6 +50,7 @@ private:
     QQuickWindow m_window;
     QQmlEngine m_qmlEngine;
     QWaylandXdgShell m_xdgShell;
+    QWaylandSeat *m_seat = nullptr;
     QWaylandOutput *m_output = nullptr;
     QVector<WindowSurface*> m_windows;
     QPointer<WindowSurface> m_active;

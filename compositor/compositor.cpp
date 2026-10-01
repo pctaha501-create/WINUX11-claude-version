@@ -1,7 +1,8 @@
 #include "compositor.h"
+#include <QEvent>
+#include <QKeyEvent>
 #include <QWaylandOutputMode>
 #include <QQmlComponent>
-#include <QQuickItem>
 #include <QUrl>
 
 WindowSurface::WindowSurface(QWaylandXdgToplevel *topLevel, QObject *parent)
@@ -14,6 +15,7 @@ WinuxCompositor::WinuxCompositor(QObject *parent)
     m_window.setTitle(QStringLiteral("WINUX11"));
     m_window.setColor(QColor(QStringLiteral("#090b10")));
     m_window.resize(1920, 1080);
+    m_window.installEventFilter(this);
 }
 
 void WinuxCompositor::create() {
@@ -21,6 +23,10 @@ void WinuxCompositor::create() {
     m_initialized = true;
 
     QWaylandCompositor::create();
+
+    m_seat = new QWaylandSeat(this, QWaylandSeat::Pointer | QWaylandSeat::Keyboard);
+    m_seat->setObjectName(QStringLiteral("WINUX11 Seat"));
+    m_seat->initialize();
 
     m_output = new QWaylandOutput(this, &m_window);
     const QWaylandOutputMode mode(QSize(1920, 1080), 60000);
@@ -32,12 +38,39 @@ void WinuxCompositor::create() {
     m_output->setModel(QStringLiteral("WINUX11 Virtual Display"));
 
     QQmlComponent shellComponent(&m_qmlEngine);
-    shellComponent.loadUrl(QUrl(QStringLiteral("qrc:/Shell.qml")));
-    if (shellComponent.isReady()) {
-        shellComponent.create(m_window.contentItem());
+    shellComponent.loadUrl(QUrl(QStringLiteral("qrc:/shell_qml/../shell/qml/Shell.qml")));
+    if (!shellComponent.isReady()) {
+        shellComponent.loadUrl(QUrl(QStringLiteral("qrc:/shell_qml/Shell.qml")));
     }
+    if (shellComponent.isReady())
+        shellComponent.create(m_window.contentItem());
 
     m_window.show();
+}
+
+bool WinuxCompositor::eventFilter(QObject *watched, QEvent *event) {
+    if (watched == &m_window && m_seat && event->type() == QEvent::KeyPress) {
+        auto *key = static_cast<QKeyEvent*>(event);
+        if (key->key() == Qt::Key_F1 && key->modifiers().testFlag(Qt::ControlModifier)) {
+            setWorkspace(0);
+            return true;
+        }
+        if (key->key() == Qt::Key_F2 && key->modifiers().testFlag(Qt::ControlModifier)) {
+            setWorkspace(1);
+            return true;
+        }
+        if (key->key() == Qt::Key_F3 && key->modifiers().testFlag(Qt::ControlModifier)) {
+            setWorkspace(2);
+            return true;
+        }
+        if (key->key() == Qt::Key_F4 && key->modifiers().testFlag(Qt::ControlModifier)) {
+            setWorkspace(3);
+            return true;
+        }
+        m_seat->sendFullKeyEvent(key);
+        return false;
+    }
+    return QWaylandCompositor::eventFilter(watched, event);
 }
 
 void WinuxCompositor::onNewToplevel(QWaylandXdgToplevel *toplevel, QWaylandXdgSurface *surface) {
@@ -47,7 +80,6 @@ void WinuxCompositor::onNewToplevel(QWaylandXdgToplevel *toplevel, QWaylandXdgSu
 
     auto *item = new QWaylandQuickShellSurfaceItem(m_window.contentItem());
     item->setShellSurface(toplevel->xdgSurface());
-    item->setOutput(m_output);
     item->setFocusOnClick(true);
     item->setAutoCreatePopupItems(true);
     window->setItem(item);
@@ -74,8 +106,11 @@ void WinuxCompositor::onToplevelDestroyed() {
 void WinuxCompositor::activate(WindowSurface *window) {
     if (!window || !window->topLevel() || window->workspace() != m_activeWorkspace) return;
     if (m_active == window) return;
-    if (m_active && m_active->topLevel()) m_active->topLevel()->sendConfigure(QSize(), {QWaylandXdgToplevel::ActivatedState});
+    if (m_active && m_active->topLevel())
+        m_active->topLevel()->sendConfigure(QSize(), {QWaylandXdgToplevel::ActivatedState});
     m_active = window;
+    if (m_seat && window->topLevel()->surface())
+        m_seat->setKeyboardFocus(window->topLevel()->surface());
     window->topLevel()->sendConfigure(QSize(), {QWaylandXdgToplevel::ActivatedState});
     emit activeWindowChanged(window);
 }
@@ -90,12 +125,16 @@ void WinuxCompositor::setWorkspace(int workspace) {
     if (workspace < 0 || workspace == m_activeWorkspace) return;
     m_activeWorkspace = workspace;
     m_active = nullptr;
+    if (m_seat) m_seat->setKeyboardFocus(nullptr);
     for (auto *window : m_windows) {
         if (!window->item()) continue;
-        window->item()->setVisible(window->workspace() == workspace);
+        window->item()->setVisible(window->workspace() == workspace && !window->minimized());
     }
     for (auto *window : m_windows) {
-        if (window->workspace() == workspace) { activate(window); break; }
+        if (window->workspace() == workspace && !window->minimized()) {
+            activate(window);
+            break;
+        }
     }
     emit workspaceChanged(workspace);
 }
