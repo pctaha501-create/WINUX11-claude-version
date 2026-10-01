@@ -1,5 +1,9 @@
 #!/bin/sh
 set -eu
+if [ "$(id -u)" -ne 0 ]; then
+ command -v sudo >/dev/null 2>&1 || { echo "WINUX11 ISO: root privileges are required (sudo unavailable)" >&2; exit 1; }
+ exec sudo -E sh "$0" "$@"
+fi
 [ "${WINUX11_ISO_ENABLE:-0}" = "1" ] || { echo "WINUX11 ISO generation is intentionally disabled unless WINUX11_ISO_ENABLE=1." >&2; exit 2; }
 command -v lb >/dev/null 2>&1 || { echo "live-build (lb) is required" >&2; exit 1; }
 root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
