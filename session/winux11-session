@@ -4,14 +4,14 @@ prefix="${WINUX11_PREFIX:-/usr}"
 export XDG_CURRENT_DESKTOP=WINUX11
 export XDG_SESSION_DESKTOP=WINUX11
 export XDG_SESSION_TYPE=wayland
-export QT_QPA_PLATFORM=wayland
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-winux11}"
 [ -d "$XDG_RUNTIME_DIR" ] || { echo "WINUX11: XDG_RUNTIME_DIR is unavailable" >&2; exit 1; }
 compositor="$prefix/bin/winux11-compositor"
 shell="$prefix/bin/winux11-shell"
 [ -x "$compositor" ] && [ -x "$shell" ] || { echo "WINUX11: compositor or shell is not installed" >&2; exit 1; }
-"$compositor" --wayland-socket-name="$WAYLAND_DISPLAY" &
+compositor_qpa="${WINUX11_COMPOSITOR_QPA_PLATFORM:-wayland}"
+QT_QPA_PLATFORM="$compositor_qpa" "$compositor" --wayland-socket-name="$WAYLAND_DISPLAY" &
 compositor_pid=$!
 cleanup(){ kill "$compositor_pid" 2>/dev/null || true; wait "$compositor_pid" 2>/dev/null || true; }
 trap cleanup INT TERM EXIT
@@ -21,4 +21,5 @@ for i in $(seq 1 100); do
   sleep .05
 done
 [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ] || { echo "WINUX11: compositor Wayland socket did not become ready" >&2; exit 1; }
+export QT_QPA_PLATFORM=wayland
 exec "$shell"

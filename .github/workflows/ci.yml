@@ -32,4 +32,8 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/winux11-runtime"
           chmod 700 "$RUNNER_TEMP/winux11-runtime"
-          timeout 10s xvfb-run -a env XDG_RUNTIME_DIR="$RUNNER_TEMP/winux11-runtime" WINUX11_PREFIX="$RUNNER_TEMP/winux11-root" sh session/winux11-session || test "$?" = 124
+          set +e
+          timeout 10s xvfb-run -a env XDG_RUNTIME_DIR="$RUNNER_TEMP/winux11-runtime" WINUX11_PREFIX="$RUNNER_TEMP/winux11-root" WINUX11_COMPOSITOR_QPA_PLATFORM=xcb sh session/winux11-session
+          rc=$?
+          set -e
+          test "$rc" = 124
