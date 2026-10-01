@@ -2,5 +2,9 @@
 set -eu
 export XDG_CURRENT_DESKTOP=WINUX11
 export XDG_SESSION_DESKTOP=WINUX11
+export XDG_SESSION_TYPE=wayland
 export QT_QPA_PLATFORM=wayland
-exec winux11-compositor
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+if [ ! -d "$XDG_RUNTIME_DIR" ]; then echo "WINUX11: XDG_RUNTIME_DIR is unavailable" >&2; exit 1; fi
+if [ ! -x /usr/bin/winux11-compositor ]; then echo "WINUX11: compositor is not installed" >&2; exit 1; fi
+exec /usr/bin/winux11-compositor --wayland-socket-name=wayland-winux11
