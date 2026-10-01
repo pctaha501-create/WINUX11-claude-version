@@ -38,3 +38,4 @@ jobs:
           mkdir -p "$RUNNER_TEMP/winux11-runtime"
           chmod 700 "$RUNNER_TEMP/winux11-runtime"
           timeout 8s env QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR="$RUNNER_TEMP/winux11-runtime" WINUX11_PREFIX="$RUNNER_TEMP/winux11-root" WINUX11_COMPOSITOR_QPA_PLATFORM=offscreen WINUX11_COMPOSITOR_QT_QUICK_BACKEND=software WINUX11_HEADLESS_SMOKE=1 sh session/winux11-session
+# final required CI definition
