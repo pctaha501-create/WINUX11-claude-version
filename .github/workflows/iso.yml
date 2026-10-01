@@ -1,0 +1,33 @@
+name: WINUX11 ISO
+on:
+  workflow_dispatch:
+jobs:
+  build-iso:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build pkg-config libxkbcommon-dev qt6-base-dev qt6-declarative-dev qt6-wayland-dev live-build cpio debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin mtools dosfstools
+      - name: Build WINUX11
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DWINUX11_BUILD_TESTS=ON
+      - name: Compile
+        run: cmake --build build --parallel
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Stage ISO
+        run: cmake --install build --prefix "$RUNNER_TEMP/winux11-root"
+      - name: Build ISO
+        env:
+          WINUX11_ISO_ENABLE: "1"
+          WINUX11_BUILD_DIR: ${{ github.workspace }}/build
+          WINUX11_ISO_OUTPUT: ${{ github.workspace }}/iso/out
+        run: ./iso/build.sh
+      - name: Upload ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: WINUX11-amd64-iso
+          path: |
+            iso/out/WINUX11-amd64.iso
+            iso/out/WINUX11-amd64.iso.sha256
