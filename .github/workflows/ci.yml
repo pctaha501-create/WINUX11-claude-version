@@ -27,17 +27,3 @@ jobs:
           test -x "$RUNNER_TEMP/winux11-root/bin/winux11-compositor"
           test -x "$RUNNER_TEMP/winux11-root/bin/winux11-shell"
           test -f "$RUNNER_TEMP/winux11-root/share/wayland-sessions/winux11.desktop"
-
-  webengine:
-    runs-on: ubuntu-24.04
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install optional WebEngine dependency
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build pkg-config qt6-base-dev qt6-declarative-dev qt6-wayland-dev qt6-webengine-dev
-      - name: Configure
-        run: cmake -S . -B build-webengine -G Ninja -DCMAKE_BUILD_TYPE=Release -DWINUX11_BUILD_TESTS=OFF
-      - name: Build
-        run: cmake --build build-webengine --parallel
