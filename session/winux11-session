@@ -5,11 +5,17 @@ export XDG_SESSION_DESKTOP=WINUX11
 export XDG_SESSION_TYPE=wayland
 export QT_QPA_PLATFORM=wayland
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+export WAYLAND_DISPLAY=wayland-winux11
 if [ ! -d "$XDG_RUNTIME_DIR" ]; then echo "WINUX11: XDG_RUNTIME_DIR is unavailable" >&2; exit 1; fi
 if [ ! -x /usr/bin/winux11-compositor ] || [ ! -x /usr/bin/winux11-shell ]; then echo "WINUX11: compositor or shell is not installed" >&2; exit 1; fi
-/usr/bin/winux11-compositor --wayland-socket-name=wayland-winux11 &
+/usr/bin/winux11-compositor --wayland-socket-name="$WAYLAND_DISPLAY" &
 compositor_pid=$!
 cleanup(){ kill "$compositor_pid" 2>/dev/null || true; wait "$compositor_pid" 2>/dev/null || true; }
 trap cleanup INT TERM EXIT
-for i in $(seq 1 100); do [ -S "$XDG_RUNTIME_DIR/winux11-shell.sock" ] && break; kill -0 "$compositor_pid" 2>/dev/null || exit 1; sleep .05; done
+for i in $(seq 1 100); do
+  [ -S "$XDG_RUNTIME_DIR/winux11-shell.sock" ] && break
+  kill -0 "$compositor_pid" 2>/dev/null || exit 1
+  sleep .05
+done
+[ -S "$XDG_RUNTIME_DIR/winux11-shell.sock" ] || { echo "WINUX11: compositor shell IPC did not become ready" >&2; exit 1; }
 exec /usr/bin/winux11-shell
