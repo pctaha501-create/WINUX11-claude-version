@@ -1,0 +1,8 @@
+systemd
+dbus
+network-manager
+bluez
+pipewire
+wireplumber
+xwayland
+qt6-wayland
