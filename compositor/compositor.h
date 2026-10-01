@@ -4,6 +4,7 @@
 #include <QWaylandOutput>
 #include <QWaylandQuickShellSurfaceItem>
 #include <QQuickWindow>
+#include <QQmlEngine>
 #include <QPointer>
 #include <QVector>
 
@@ -44,6 +45,7 @@ private slots:
     void onToplevelDestroyed();
 private:
     QQuickWindow m_window;
+    QQmlEngine m_qmlEngine;
     QWaylandXdgShell m_xdgShell;
     QWaylandOutput *m_output = nullptr;
     QVector<WindowSurface*> m_windows;

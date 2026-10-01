@@ -4,14 +4,14 @@ WINUX11 is an independent Linux desktop environment built from zero around Wayla
 
 Architecture: Linux → Wayland → WINUX11 compositor → WINUX11 shell → system services → applications.
 
-This repository is developed as a real desktop environment, not a web mockup. System-facing features use Linux APIs/utilities and fail closed when capabilities are unavailable.
+The compositor is a real Qt Wayland compositor. It creates an XDG shell, a Wayland output, and QWaylandQuickShellSurfaceItem instances for client surfaces, while the shell is rendered in the compositor's Qt Quick scene.
+
+Core applications are real Linux/Qt processes rather than mock data. Missing capabilities are reported instead of being treated as success.
 
 Build with CMake + Ninja:
 
-```bash
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-ctest --test-dir build --output-on-failure
-```
+cmake --preset release
+cmake --build build/release
+ctest --test-dir build/release --output-on-failure
 
 The ISO is intentionally a later stage; the desktop/session must mature before image construction.
