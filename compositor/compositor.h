@@ -8,6 +8,8 @@
 #include <QPointer>
 #include <QVariantList>
 #include <QVector>
+#include <QPointF>
+#include <QRectF>
 class ShellIpcServer;
 class WindowSurface final:public QObject{
  Q_OBJECT
@@ -50,7 +52,12 @@ signals:void windowAdded(WindowSurface*);void windowRemoved(WindowSurface*);void
 protected:bool eventFilter(QObject *watched,QEvent *event)override;
 private slots:void onNewToplevel(QWaylandXdgToplevel*,QWaylandXdgSurface*);void onToplevelDestroyed();
 private:
+ QWaylandQuickShellSurfaceItem *windowAt(const QPointF &pos)const;
+ WindowSurface *surfaceAt(const QPointF &pos)const;
+ bool handlePointerEvent(QEvent *event);
+ void finishPointerGrab();
  QQuickWindow m_window;QWaylandXdgShell m_xdgShell;QWaylandSeat *m_seat=nullptr;QWaylandOutput *m_output=nullptr;
  QVector<WindowSurface*> m_windows;QPointer<WindowSurface> m_active;int m_activeWorkspace=0;bool m_initialized=false;
  ShellIpcServer *m_shellIpc=nullptr;
+ QPointer<WindowSurface> m_pointerGrabWindow;QPointF m_pointerGrabStart;QRectF m_pointerGrabGeometry;Qt::MouseButton m_pointerGrabButton=Qt::NoButton;bool m_pointerMoveGrab=false;bool m_pointerResizeGrab=false;int m_nextZ=1;
 };
