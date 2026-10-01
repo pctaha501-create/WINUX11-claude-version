@@ -15,8 +15,11 @@ jobs:
         run: cmake --build build --parallel
       - name: Test
         run: ctest --test-dir build --output-on-failure
-      - name: Validate install/session metadata
+      - name: Install validation
+        run: cmake --install build --prefix "$RUNNER_TEMP/winux11-root"
+      - name: Validate session
         run: |
-          test -f session/winux11.desktop
+          test -x "$RUNNER_TEMP/winux11-root/bin/winux11-compositor"
+          test -f "$RUNNER_TEMP/winux11-root/share/wayland-sessions/winux11.desktop"
           test -f session/winux11-session
           test -f installer/install.sh

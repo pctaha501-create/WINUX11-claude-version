@@ -1,5 +1,5 @@
-find_package(Qt6 6.5 REQUIRED COMPONENTS WebEngineQuick)
+find_package(Qt6 6.4 REQUIRED COMPONENTS WebEngineQuick)
 qt_add_executable(winux11-browser main.cpp)
 target_link_libraries(winux11-browser PRIVATE Qt6::Core Qt6::Gui Qt6::Quick Qt6::QuickControls2 Qt6::WebEngineQuick)
 install(TARGETS winux11-browser RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-qt_add_resources(winux11-browser "browser_qml" FILES browser.qrc)
+qt_add_resources(winux11-browser "browser_qml" FILES Browser.qml)

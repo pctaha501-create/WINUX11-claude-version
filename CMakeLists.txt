@@ -6,7 +6,9 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 option(WINUX11_BUILD_TESTS "Build WINUX11 tests" ON)
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 WaylandCompositor)
+
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 WaylandCompositor)
+
 add_subdirectory(compositor)
 add_subdirectory(services)
 add_subdirectory(compatibility)
@@ -15,9 +17,11 @@ add_subdirectory(applications/explorer)
 add_subdirectory(applications/settings)
 add_subdirectory(applications/taskmanager)
 add_subdirectory(applications/browser)
+
 if(WINUX11_BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
 endif()
+
 include(GNUInstallDirs)
 install(DIRECTORY session/ DESTINATION ${CMAKE_INSTALL_DATADIR}/wayland-sessions FILES_MATCHING PATTERN "*.desktop")
