@@ -18,25 +18,24 @@ void WinuxCompositor::create(){
  m_seat=new QWaylandSeat(this,QWaylandSeat::Pointer|QWaylandSeat::Keyboard);m_seat->setObjectName("WINUX11 Seat");m_seat->initialize();
  m_output=new QWaylandOutput(this,&m_window);const QWaylandOutputMode mode(QSize(1920,1080),60000);
  m_output->addMode(mode,true);m_output->setCurrentMode(mode);m_output->setPhysicalSize(QSize(600,340));m_output->setScaleFactor(1);m_output->setManufacturer("WINUX11");m_output->setModel("WINUX11 Virtual Display");
+ m_qmlEngine.rootContext()->setContextProperty("winuxCompositor",this);
  QQmlComponent shell(&m_qmlEngine);shell.loadUrl(QUrl("qrc:/shell_qml/Shell.qml"));if(shell.isReady())shell.create(m_window.contentItem());
- m_qmlEngine.rootContext()->setContextProperty("winuxCompositor",this);m_window.show();
+ m_window.show();
 }
 bool WinuxCompositor::eventFilter(QObject *watched,QEvent *event){
  if(watched==&m_window&&m_seat&&event->type()==QEvent::KeyPress){
   auto *key=static_cast<QKeyEvent*>(event);
-  if(key->modifiers().testFlag(Qt::ControlModifier)){
-   if(key->key()>=Qt::Key_F1&&key->key()<=Qt::Key_F4){setWorkspace(key->key()-Qt::Key_F1);return true;}
-  }
-  if(key->modifiers().testFlag(Qt::AltModifier)&&key->key()==Qt::Key_Tab){activateIndex(m_active?((m_windows.indexOf(m_active)+1)%m_windows.size()):0);return true;}
+  if(key->modifiers().testFlag(Qt::ControlModifier)&&key->key()>=Qt::Key_F1&&key->key()<=Qt::Key_F4){setWorkspace(key->key()-Qt::Key_F1);return true;}
+  if(key->modifiers().testFlag(Qt::AltModifier)&&key->key()==Qt::Key_Tab){if(!m_windows.isEmpty())activateIndex(m_active?((m_windows.indexOf(m_active)+1)%m_windows.size()):0);return true;}
   m_seat->sendFullKeyEvent(key);
  }
  return QWaylandCompositor::eventFilter(watched,event);
 }
 QVariantList WinuxCompositor::windowList()const{QVariantList out;for(auto *w:m_windows)out<<QVariant::fromValue(static_cast<QObject*>(w));return out;}
-void WinuxCompositor::activateIndex(int index){if(index<0||index>=m_windows.size())return;activate(m_windows[index]);}
+void WinuxCompositor::activateIndex(int index){if(index>=0&&index<m_windows.size())activate(m_windows[index]);}
 bool WinuxCompositor::launchApplication(const QString &name){
  const QHash<QString,QString> apps{{"Terminal","winux11-terminal"},{"Files","winux11-explorer"},{"Settings","winux11-settings"},{"Task Manager","winux11-taskmanager"},{"Security Center","winux11-security"},{"Browser","winux11-browser"}};
- const auto it=apps.find(name);if(it==apps.end())return false;return QProcess::startDetached(it.value(),{});
+ const auto it=apps.find(name);return it!=apps.end()&&QProcess::startDetached(it.value(),{});
 }
 void WinuxCompositor::minimizeActive(){if(!m_active||!m_active->item())return;m_active->setMinimized(true);m_active->item()->setVisible(false);m_active=nullptr;emit windowListChanged();}
 void WinuxCompositor::restoreWindow(int index){if(index<0||index>=m_windows.size())return;auto *w=m_windows[index];w->setMinimized(false);w->item()->setVisible(w->workspace()==m_activeWorkspace);activate(w);emit windowListChanged();}
