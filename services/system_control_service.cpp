@@ -1,0 +1,53 @@
+#include "system_control_service.h"
+#include "command_runner.h"
+static QVariantMap runMap(const QString &program, const QStringList &args, int timeout=2500) {
+    const auto r = CommandRunner::run(program,args,timeout);
+    return {{"available",r.started},{"exitCode",r.exitCode},{"stdout",r.stdoutText.trimmed()},
+            {"stderr",r.stderrText.trimmed()},{"timedOut",r.timedOut}};
+}
+QVariantMap SystemControlService::networkState() const {
+    auto r = runMap("nmcli",{"-t","-f","GENERAL.STATE,GENERAL.CONNECTION","device","show"});
+    if (!r["available"].toBool()) r = runMap("ip",{"-brief","address"});
+    return r;
+}
+QVariantMap SystemControlService::audioState() const {
+    auto r = runMap("wpctl",{"get-volume","@DEFAULT_AUDIO_SINK@"});
+    if (!r["available"]) r = runMap("pactl",{"get-sink-volume","@DEFAULT_SINK@"});
+    return r;
+}
+QVariantList SystemControlService::storageState() const {
+    const auto r = CommandRunner::run("lsblk",{"-J","-o","NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,FSAVAIL,FSUSE%"},
+                                       4000);
+    return {QVariantMap{{"available",r.started},{"exitCode",r.exitCode},{"json",r.stdoutText},
+                        {"stderr",r.stderrText},{"timedOut",r.timedOut}}};
+}
+QVariantList SystemControlService::users() const {
+    const auto r = CommandRunner::run("getent",{"passwd"},3000);
+    QVariantList out;
+    if (!r.started) return out;
+    for (const auto &line : r.stdoutText.split('\n',Qt::SkipEmptyParts)) {
+        const auto p=line.split(':');
+        if (p.size() >= 7) out << QVariantMap{{"name",p[0]},{"uid",p[2]},{"home",p[5]},{"shell",p[6]}};
+    }
+    return out;
+}
+QVariantList SystemControlService::packageUpdates() const {
+    const auto r = CommandRunner::run("apt-get",{"-s","upgrade"},12000);
+    return {QVariantMap{{"available",r.started},{"exitCode",r.exitCode},{"stdout",r.stdoutText},
+                        {"stderr",r.stderrText},{"timedOut",r.timedOut}}};
+}
+QVariantMap SystemControlService::firewallState() const {
+    auto r=runMap("ufw",{"status"});
+    if (!r["available"]) r=runMap("systemctl",{"is-active","firewalld"});
+    if (!r["available"]) return {{"available",false},{"status","unavailable"}};
+    return {{"available",true},{"exitCode",r["exitCode"]},{"status",r["stdout"]},{"stderr",r["stderr"]}};
+}
+bool SystemControlService::setNetworkEnabled(bool enabled) const {
+    const auto r=CommandRunner::run("nmcli",{"network",enabled?"on":"off"},5000);
+    return r.started && r.exitCode==0;
+}
+bool SystemControlService::setAudioVolume(int percent) const {
+    percent=qBound(0,percent,150);
+    const auto r=CommandRunner::run("wpctl",{"set-volume","@DEFAULT_AUDIO_SINK@",QString::number(percent/100.0)},3000);
+    return r.started && r.exitCode==0;
+}

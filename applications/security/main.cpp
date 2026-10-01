@@ -1,16 +1,16 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include "../../services/system_info.h"
+#include "../../services/security_service.h"
 #include "../../services/system_control_service.h"
 int main(int argc,char **argv){
     QGuiApplication app(argc,argv);
-    SystemInfo systemInfo;
+    SecurityService security;
     SystemControlService system;
     QQmlApplicationEngine engine;
-    engine.rootContext()->setContextProperty("systemInfo",&systemInfo);
+    engine.rootContext()->setContextProperty("securityService",&security);
     engine.rootContext()->setContextProperty("systemControl",&system);
-    engine.load(QUrl(QStringLiteral("qrc:/Settings.qml")));
+    engine.load(QUrl(QStringLiteral("qrc:/Security.qml")));
     if(engine.rootObjects().isEmpty()) return 1;
     return app.exec();
 }

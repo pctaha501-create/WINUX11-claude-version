@@ -1,14 +1,31 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
 ApplicationWindow {
-    visible: true; width: 900; height: 650
-    title: "WINUX11 Settings"; color: "#0a0d12"
-    Column {
-        anchors.fill: parent; anchors.margins: 32; spacing: 18
-        Label { text: "Settings"; font.pixelSize: 34; color: "white" }
-        Label { text: "System information"; font.pixelSize: 20; color: "#b9c0cf" }
-        TextArea { id: details; width: parent.width; height: 260; readOnly: true; color: "#e8edf7"; background: Rectangle { color: "#11151d"; radius: 14 } }
-        Button { text: "Refresh"; onClicked: details.text = JSON.stringify(systemInfo.snapshot(), null, 2) }
+    visible:true; width:1000; height:700
+    title:"WINUX11 Settings"; color:"#090b10"
+    property var info: systemInfo.snapshot()
+    ColumnLayout {
+        anchors.fill:parent; anchors.margins:24; spacing:14
+        Label { text:"Settings"; color:"white"; font.pixelSize:34 }
+        TabBar {
+            id:tabs; Layout.fillWidth:true
+            TabButton{text:"System"} TabButton{text:"Network"} TabButton{text:"Audio"} TabButton{text:"Storage"} TabButton{text:"Users"}
+        }
+        StackLayout { currentIndex:tabs.currentIndex; Layout.fillWidth:true; Layout.fillHeight:true
+            ScrollView { TextArea { readOnly:true; text:JSON.stringify(info,null,2); color:"#e8edf7"; background:Rectangle{color:"#11151d";radius:14} } }
+            Column { spacing:12
+                Label{text:JSON.stringify(systemControl.networkState(),null,2);color:"#dbe3f2"}
+                Button{text:"Enable Network";onClicked:systemControl.setNetworkEnabled(true)}
+                Button{text:"Disable Network";onClicked:systemControl.setNetworkEnabled(false)}
+            }
+            Column { spacing:12
+                Label{text:JSON.stringify(systemControl.audioState(),null,2);color:"#dbe3f2"}
+                Slider{id:volume;from:0;to:100;value:50}
+                Button{text:"Apply Volume";onClicked:systemControl.setAudioVolume(volume.value)}
+            }
+            ScrollView { TextArea{readOnly:true;text:JSON.stringify(systemControl.storageState(),null,2);color:"#e8edf7";background:Rectangle{color:"#11151d";radius:14}}}
+            ListView { model:systemControl.users(); delegate:Label{text:modelData.name+"  UID "+modelData.uid+"  "+modelData.home;color:"#e8edf7";height:32} }
+        }
     }
-    Component.onCompleted: details.text = JSON.stringify(systemInfo.snapshot(), null, 2)
 }
