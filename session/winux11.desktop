@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=WINUX11
 Comment=WINUX11 Wayland desktop session
-Exec=winux11-session
+Exec=sh /usr/bin/winux11-session
 Type=Application
 DesktopNames=WINUX11
