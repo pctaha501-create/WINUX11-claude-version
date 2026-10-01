@@ -4,26 +4,228 @@
 #include <QKeyEvent>
 #include <QProcess>
 #include <QWaylandOutputMode>
-WindowSurface::WindowSurface(QWaylandXdgToplevel *t,QObject *p):QObject(p),m_topLevel(t){connect(t,&QWaylandXdgToplevel::titleChanged,this,&WindowSurface::titleChanged);}
-QString WindowSurface::title()const{return m_topLevel?m_topLevel->title():QStringLiteral("Window");}
-void WindowSurface::saveGeometry(){if(!m_item||m_hasSavedGeometry)return;m_savedGeometry=QRectF(m_item->x(),m_item->y(),m_item->width(),m_item->height());m_hasSavedGeometry=true;}
-void WindowSurface::restoreGeometry(){if(!m_item||!m_hasSavedGeometry)return;m_item->setX(m_savedGeometry.x());m_item->setY(m_savedGeometry.y());m_item->setWidth(m_savedGeometry.width());m_item->setHeight(m_savedGeometry.height());m_hasSavedGeometry=false;}
-WinuxCompositor::WinuxCompositor(QObject *p):QWaylandCompositor(p),m_xdgShell(this){connect(&m_xdgShell,&QWaylandXdgShell::toplevelCreated,this,&WinuxCompositor::onNewToplevel);m_window.setTitle("WINUX11");m_window.setColor(QColor("#090b10"));m_window.resize(1920,1080);m_window.installEventFilter(this);}
-void WinuxCompositor::create(){if(m_initialized)return;m_initialized=true;QWaylandCompositor::create();m_seat=new QWaylandSeat(this,QWaylandSeat::Pointer|QWaylandSeat::Keyboard);m_seat->initialize();m_output=new QWaylandOutput(this,&m_window);const QWaylandOutputMode mode(QSize(1920,1080),60000);m_output->addMode(mode,true);m_output->setCurrentMode(mode);m_output->setPhysicalSize(QSize(600,340));m_output->setScaleFactor(1);m_output->setManufacturer("WINUX11");m_output->setModel("WINUX11 Virtual Display");m_shellIpc=new ShellIpcServer(this,this);if(!m_shellIpc->start())qWarning()<<"WINUX11 shell IPC unavailable:"<<m_shellIpc->socketPath();m_window.show();}
-bool WinuxCompositor::eventFilter(QObject *watched,QEvent *event){if(watched==&m_window&&m_seat&&event->type()==QEvent::KeyPress){auto *k=static_cast<QKeyEvent*>(event);const auto mods=k->modifiers();if(mods.testFlag(Qt::ControlModifier)&&k->key()>=Qt::Key_F1&&k->key()<=Qt::Key_F4){setWorkspace(k->key()-Qt::Key_F1);return true;}if(mods.testFlag(Qt::AltModifier)&&k->key()==Qt::Key_Tab){if(!m_windows.isEmpty())activateIndex(m_active?((m_windows.indexOf(m_active)+1)%m_windows.size()):0);return true;}if(mods.testFlag(Qt::MetaModifier)&&m_active){if(k->key()==Qt::Key_Left){snapActive("left");return true;}if(k->key()==Qt::Key_Right){snapActive("right");return true;}if(k->key()==Qt::Key_Up){maximizeActive();return true;}if(k->key()==Qt::Key_Down){minimizeActive();return true;if(mods.testFlag(Qt::ShiftModifier)){if(k->key()==Qt::Key_Left){resizeActive(-40,0);return true;}if(k->key()==Qt::Key_Right){resizeActive(40,0);return true;}if(k->key()==Qt::Key_Up){resizeActive(0,-40);return true;}if(k->key()==Qt::Key_Down){resizeActive(0,40);return true;}}}}m_seat->sendFullKeyEvent(k);}return QWaylandCompositor::eventFilter(watched,event);}
-QVariantList WinuxCompositor::windowList()const{QVariantList out;for(auto *w:m_windows)out<<QVariant::fromValue(static_cast<QObject*>(w));return out;}
-void WinuxCompositor::activateIndex(int i){if(i>=0&&i<m_windows.size())activate(m_windows[i]);}
-bool WinuxCompositor::launchApplication(const QString &name){const QHash<QString,QString> apps{{"Terminal","winux11-terminal"},{"Files","winux11-explorer"},{"Settings","winux11-settings"},{"Task Manager","winux11-taskmanager"},{"Security Center","winux11-security"},{"Browser","winux11-browser"},{"Software Center","winux11-softwarecenter"},{"Network","winux11-network"},{"Downloader","winux11-downloader"},{"Archive Manager","winux11-archive"},{"Screenshot","winux11-screenshot"},{"Calculator","winux11-calculator"},{"Clock","winux11-clock"},{"Text Editor","winux11-editor"}};const auto it=apps.find(name);return it!=apps.end()&&QProcess::startDetached(it.value(),{});}
-void WinuxCompositor::minimizeActive(){if(!m_active||!m_active->item())return;m_active->setMinimized(true);m_active->item()->setVisible(false);m_active=nullptr;emit windowListChanged();}
-void WinuxCompositor::restoreWindow(int i){if(i<0||i>=m_windows.size())return;auto *w=m_windows[i];w->setMinimized(false);w->item()->setVisible(w->workspace()==m_activeWorkspace);activate(w);emit windowListChanged();}
-void WinuxCompositor::closeActive(){if(m_active&&m_active->topLevel())m_active->topLevel()->sendClose();}
-void WinuxCompositor::maximizeActive(){if(!m_active||!m_active->item()||!m_active->topLevel())return;auto *item=m_active->item();if(m_active->topLevel()->maximized()){m_active->restoreGeometry();m_active->topLevel()->sendUnmaximized(QSize());}else{m_active->saveGeometry();item->setX(0);item->setY(0);item->setWidth(m_window.width());item->setHeight(m_window.height()-86);m_active->topLevel()->sendMaximized(QSize(item->width(),item->height()));}emit windowListChanged();}
-void WinuxCompositor::toggleFullscreenActive(){if(!m_active||!m_active->item()||!m_active->topLevel())return;if(m_active->topLevel()->fullscreen())m_active->topLevel()->sendUnmaximized(QSize());else m_active->topLevel()->sendFullscreen(QSize(m_window.width(),m_window.height()));}
-void WinuxCompositor::snapActive(const QString &side){if(!m_active||!m_active->item()||!m_active->topLevel())return;auto *i=m_active->item();m_active->saveGeometry();const qreal w=m_window.width()/2.0;if(side=="left"){i->setX(0);i->setY(0);i->setWidth(w);i->setHeight(m_window.height()-86);}else if(side=="right"){i->setX(w);i->setY(0);i->setWidth(w);i->setHeight(m_window.height()-86);}else return;m_active->topLevel()->sendConfigure(QSize(i->width(),i->height()),{QWaylandXdgToplevel::ActivatedState});emit windowListChanged();}
-void WinuxCompositor::moveActive(int dx,int dy){if(!m_active||!m_active->item())return;auto *i=m_active->item();i->setX(qBound(0.0,i->x()+dx,double(m_window.width()-i->width())));i->setY(qBound(0.0,i->y()+dy,double(m_window.height()-i->height())));emit windowListChanged();}
-void WinuxCompositor::resizeActive(int dw,int dh){if(!m_active||!m_active->item())return;auto *i=m_active->item();i->setWidth(qMax(200.0,i->width()+dw));i->setHeight(qMax(120.0,i->height()+dh));m_active->topLevel()->sendResizing(QSize(i->width(),i->height()));emit windowListChanged();}
-void WinuxCompositor::onNewToplevel(QWaylandXdgToplevel *t,QWaylandXdgSurface *s){Q_UNUSED(s);auto *w=new WindowSurface(t,this);m_windows.push_back(w);auto *item=new QWaylandQuickShellSurfaceItem(m_window.contentItem());item->setShellSurface(t->xdgSurface());item->setFocusOnClick(true);item->setAutoCreatePopupItems(true);w->setItem(item);item->setX((m_window.width()-800)/2);item->setY((m_window.height()-600)/2);item->setWidth(800);item->setHeight(600);connect(t,&QObject::destroyed,this,&WinuxCompositor::onToplevelDestroyed);connect(t,&QWaylandXdgToplevel::activatedChanged,this,[this,w]{if(w->topLevel()&&w->topLevel()->activated())activate(w);});emit windowAdded(w);emit windowListChanged();activate(w);}
-void WinuxCompositor::onToplevelDestroyed(){for(int i=m_windows.size()-1;i>=0;--i)if(m_windows[i]->topLevel().isNull()){auto *r=m_windows.takeAt(i);if(m_active==r)m_active=nullptr;emit windowRemoved(r);r->deleteLater();}emit windowListChanged();}
-void WinuxCompositor::activate(WindowSurface *w){if(!w||!w->topLevel()||w->workspace()!=m_activeWorkspace||w->minimized())return;if(m_active==w)return;if(m_active&&m_active->topLevel())m_active->topLevel()->sendConfigure(QSize(),{});m_active=w;if(m_seat&&w->topLevel()->surface())m_seat->setKeyboardFocus(w->topLevel()->surface());w->topLevel()->sendConfigure(QSize(),{QWaylandXdgToplevel::ActivatedState});emit activeWindowChanged(w);emit windowListChanged();}
-void WinuxCompositor::moveWorkspace(WindowSurface *w,int ws){if(!w||!w->item()||ws<0)return;w->setWorkspace(ws);w->item()->setVisible(ws==m_activeWorkspace&&!w->minimized());emit windowListChanged();}
-void WinuxCompositor::setWorkspace(int ws){if(ws<0||ws==m_activeWorkspace)return;m_activeWorkspace=ws;m_active=nullptr;if(m_seat)m_seat->setKeyboardFocus(nullptr);for(auto *w:m_windows)if(w->item())w->item()->setVisible(w->workspace()==ws&&!w->minimized());for(auto *w:m_windows)if(w->workspace()==ws&&!w->minimized()){activate(w);break;}emit workspaceChanged(ws);emit windowListChanged();}
+
+WindowSurface::WindowSurface(QWaylandXdgToplevel *t, QObject *p)
+    : QObject(p), m_topLevel(t) {
+    connect(t, &QWaylandXdgToplevel::titleChanged, this, &WindowSurface::titleChanged);
+}
+QString WindowSurface::title() const {
+    return m_topLevel ? m_topLevel->title() : QStringLiteral("Window");
+}
+void WindowSurface::saveGeometry() {
+    if (!m_item || m_hasSavedGeometry) return;
+    m_savedGeometry = QRectF(m_item->x(), m_item->y(), m_item->width(), m_item->height());
+    m_hasSavedGeometry = true;
+}
+void WindowSurface::restoreGeometry() {
+    if (!m_item || !m_hasSavedGeometry) return;
+    m_item->setX(m_savedGeometry.x());
+    m_item->setY(m_savedGeometry.y());
+    m_item->setWidth(m_savedGeometry.width());
+    m_item->setHeight(m_savedGeometry.height());
+    m_hasSavedGeometry = false;
+}
+WinuxCompositor::WinuxCompositor(QObject *p) : QWaylandCompositor(p), m_xdgShell(this) {
+    connect(&m_xdgShell, &QWaylandXdgShell::toplevelCreated, this, &WinuxCompositor::onNewToplevel);
+    m_window.setTitle("WINUX11");
+    m_window.setColor(QColor("#090b10"));
+    m_window.resize(1920, 1080);
+    m_window.installEventFilter(this);
+}
+void WinuxCompositor::create() {
+    if (m_initialized) return;
+    m_initialized = true;
+    QWaylandCompositor::create();
+    m_seat = new QWaylandSeat(this, QWaylandSeat::Pointer | QWaylandSeat::Keyboard);
+    m_seat->initialize();
+    m_output = new QWaylandOutput(this, &m_window);
+    const QWaylandOutputMode mode(QSize(1920, 1080), 60000);
+    m_output->addMode(mode, true);
+    m_output->setCurrentMode(mode);
+    m_output->setPhysicalSize(QSize(600, 340));
+    m_output->setScaleFactor(1);
+    m_output->setManufacturer("WINUX11");
+    m_output->setModel("WINUX11 Virtual Display");
+    m_shellIpc = new ShellIpcServer(this, this);
+    if (!m_shellIpc->start())
+        qWarning() << "WINUX11 shell IPC unavailable:" << m_shellIpc->socketPath();
+    m_window.show();
+}
+bool WinuxCompositor::eventFilter(QObject *watched, QEvent *event) {
+    if (watched == &m_window && m_seat && event->type() == QEvent::KeyPress) {
+        auto *k = static_cast<QKeyEvent *>(event);
+        const auto mods = k->modifiers();
+        if (mods.testFlag(Qt::ControlModifier) && k->key() >= Qt::Key_F1 && k->key() <= Qt::Key_F4) {
+            setWorkspace(k->key() - Qt::Key_F1);
+            return true;
+        }
+        if (mods.testFlag(Qt::AltModifier) && k->key() == Qt::Key_Tab) {
+            if (!m_windows.isEmpty())
+                activateIndex(m_active ? ((m_windows.indexOf(m_active) + 1) % m_windows.size()) : 0);
+            return true;
+        }
+        if (mods.testFlag(Qt::MetaModifier) && m_active) {
+            if (mods.testFlag(Qt::ShiftModifier)) {
+                if (k->key() == Qt::Key_Left) { resizeActive(-40, 0); return true; }
+                if (k->key() == Qt::Key_Right) { resizeActive(40, 0); return true; }
+                if (k->key() == Qt::Key_Up) { resizeActive(0, -40); return true; }
+                if (k->key() == Qt::Key_Down) { resizeActive(0, 40); return true; }
+            } else {
+                if (k->key() == Qt::Key_Left) { snapActive("left"); return true; }
+                if (k->key() == Qt::Key_Right) { snapActive("right"); return true; }
+                if (k->key() == Qt::Key_Up) { maximizeActive(); return true; }
+                if (k->key() == Qt::Key_Down) { minimizeActive(); return true; }
+            }
+        }
+        m_seat->sendFullKeyEvent(k);
+    }
+    return QWaylandCompositor::eventFilter(watched, event);
+}
+QVariantList WinuxCompositor::windowList() const {
+    QVariantList out;
+    for (auto *w : m_windows)
+        out << QVariant::fromValue(static_cast<QObject *>(w));
+    return out;
+}
+void WinuxCompositor::activateIndex(int i) {
+    if (i >= 0 && i < m_windows.size()) activate(m_windows[i]);
+}
+bool WinuxCompositor::launchApplication(const QString &name) {
+    const QHash<QString, QString> apps{
+        {"Terminal","winux11-terminal"},{"Files","winux11-explorer"},{"Settings","winux11-settings"},
+        {"Task Manager","winux11-taskmanager"},{"Security Center","winux11-security"},{"Browser","winux11-browser"},
+        {"Software Center","winux11-softwarecenter"},{"Network","winux11-network"},{"Downloader","winux11-downloader"},
+        {"Archive Manager","winux11-archive"},{"Screenshot","winux11-screenshot"},{"Calculator","winux11-calculator"},
+        {"Clock","winux11-clock"},{"Text Editor","winux11-editor"}
+    };
+    const auto it = apps.find(name);
+    return it != apps.end() && QProcess::startDetached(it.value(), {});
+}
+void WinuxCompositor::minimizeActive() {
+    if (!m_active || !m_active->item()) return;
+    m_active->setMinimized(true);
+    m_active->item()->setVisible(false);
+    m_active = nullptr;
+    emit windowListChanged();
+}
+void WinuxCompositor::restoreWindow(int i) {
+    if (i < 0 || i >= m_windows.size()) return;
+    auto *w = m_windows[i];
+    w->setMinimized(false);
+    w->item()->setVisible(w->workspace() == m_activeWorkspace);
+    activate(w);
+    emit windowListChanged();
+}
+void WinuxCompositor::closeActive() {
+    if (m_active && m_active->topLevel()) m_active->topLevel()->sendClose();
+}
+void WinuxCompositor::maximizeActive() {
+    if (!m_active || !m_active->item() || !m_active->topLevel()) return;
+    auto *item = m_active->item();
+    if (m_active->topLevel()->maximized()) {
+        m_active->restoreGeometry();
+        m_active->topLevel()->sendUnmaximized(QSize());
+    } else {
+        m_active->saveGeometry();
+        item->setX(0); item->setY(0);
+        item->setWidth(m_window.width());
+        item->setHeight(m_window.height() - 86);
+        m_active->topLevel()->sendMaximized(QSize(item->width(), item->height()));
+    }
+    emit windowListChanged();
+}
+void WinuxCompositor::toggleFullscreenActive() {
+    if (!m_active || !m_active->item() || !m_active->topLevel()) return;
+    if (m_active->topLevel()->fullscreen())
+        m_active->topLevel()->sendUnmaximized(QSize());
+    else
+        m_active->topLevel()->sendFullscreen(QSize(m_window.width(), m_window.height()));
+}
+void WinuxCompositor::snapActive(const QString &side) {
+    if (!m_active || !m_active->item() || !m_active->topLevel()) return;
+    auto *i = m_active->item();
+    m_active->saveGeometry();
+    const qreal w = m_window.width() / 2.0;
+    if (side == "left") {
+        i->setX(0); i->setY(0); i->setWidth(w); i->setHeight(m_window.height() - 86);
+    } else if (side == "right") {
+        i->setX(w); i->setY(0); i->setWidth(w); i->setHeight(m_window.height() - 86);
+    } else return;
+    m_active->topLevel()->sendConfigure(QSize(i->width(), i->height()), {QWaylandXdgToplevel::ActivatedState});
+    emit windowListChanged();
+}
+void WinuxCompositor::moveActive(int dx, int dy) {
+    if (!m_active || !m_active->item()) return;
+    auto *i = m_active->item();
+    i->setX(qBound(0.0, i->x() + dx, double(m_window.width() - i->width())));
+    i->setY(qBound(0.0, i->y() + dy, double(m_window.height() - i->height())));
+    emit windowListChanged();
+}
+void WinuxCompositor::resizeActive(int dw, int dh) {
+    if (!m_active || !m_active->item()) return;
+    auto *i = m_active->item();
+    i->setWidth(qMax(200.0, i->width() + dw));
+    i->setHeight(qMax(120.0, i->height() + dh));
+    m_active->topLevel()->sendResizing(QSize(i->width(), i->height()));
+    emit windowListChanged();
+}
+void WinuxCompositor::onNewToplevel(QWaylandXdgToplevel *t, QWaylandXdgSurface *s) {
+    Q_UNUSED(s);
+    auto *w = new WindowSurface(t, this);
+    m_windows.push_back(w);
+    auto *item = new QWaylandQuickShellSurfaceItem(m_window.contentItem());
+    item->setShellSurface(t->xdgSurface());
+    item->setFocusOnClick(true);
+    item->setAutoCreatePopupItems(true);
+    w->setItem(item);
+    item->setX((m_window.width() - 800) / 2);
+    item->setY((m_window.height() - 600) / 2);
+    item->setWidth(800);
+    item->setHeight(600);
+    connect(t, &QObject::destroyed, this, &WinuxCompositor::onToplevelDestroyed);
+    connect(t, &QWaylandXdgToplevel::activatedChanged, this, [this, w] {
+        if (w->topLevel() && w->topLevel()->activated()) activate(w);
+    });
+    emit windowAdded(w);
+    emit windowListChanged();
+    activate(w);
+}
+void WinuxCompositor::onToplevelDestroyed() {
+    for (int i = m_windows.size() - 1; i >= 0; --i) {
+        if (m_windows[i]->topLevel().isNull()) {
+            auto *r = m_windows.takeAt(i);
+            if (m_active == r) m_active = nullptr;
+            emit windowRemoved(r);
+            r->deleteLater();
+        }
+    }
+    emit windowListChanged();
+}
+void WinuxCompositor::activate(WindowSurface *w) {
+    if (!w || !w->topLevel() || w->workspace() != m_activeWorkspace || w->minimized()) return;
+    if (m_active == w) return;
+    if (m_active && m_active->topLevel()) m_active->topLevel()->sendConfigure(QSize(), {});
+    m_active = w;
+    if (m_seat && w->topLevel()->surface()) m_seat->setKeyboardFocus(w->topLevel()->surface());
+    w->topLevel()->sendConfigure(QSize(), {QWaylandXdgToplevel::ActivatedState});
+    emit activeWindowChanged(w);
+    emit windowListChanged();
+}
+void WinuxCompositor::moveWorkspace(WindowSurface *w, int ws) {
+    if (!w || !w->item() || ws < 0) return;
+    w->setWorkspace(ws);
+    w->item()->setVisible(ws == m_activeWorkspace && !w->minimized());
+    emit windowListChanged();
+}
+void WinuxCompositor::setWorkspace(int ws) {
+    if (ws < 0 || ws == m_activeWorkspace) return;
+    m_activeWorkspace = ws;
+    m_active = nullptr;
+    if (m_seat) m_seat->setKeyboardFocus(nullptr);
+    for (auto *w : m_windows)
+        if (w->item()) w->item()->setVisible(w->workspace() == ws && !w->minimized());
+    for (auto *w : m_windows)
+        if (w->workspace() == ws && !w->minimized()) { activate(w); break; }
+    emit workspaceChanged(ws);
+    emit windowListChanged();
+}
