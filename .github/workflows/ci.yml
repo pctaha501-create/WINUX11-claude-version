@@ -11,7 +11,7 @@ jobs:
       - name: Install core dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build pkg-config libxkbcommon-dev qt6-base-dev qt6-declarative-dev qt6-wayland-dev
+          sudo apt-get install -y build-essential cmake ninja-build pkg-config libxkbcommon-dev qt6-base-dev qt6-declarative-dev qt6-wayland-dev xvfb
       - name: Configure
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DWINUX11_BUILD_TESTS=ON
       - name: Build
@@ -20,10 +20,16 @@ jobs:
         run: ctest --test-dir build --output-on-failure
       - name: Install validation
         run: cmake --install build --prefix "$RUNNER_TEMP/winux11-root"
-      - name: Validate session
+      - name: Validate session scripts
         run: |
           sh -n session/winux11-session
           sh -n installer/install.sh
           test -x "$RUNNER_TEMP/winux11-root/bin/winux11-compositor"
           test -x "$RUNNER_TEMP/winux11-root/bin/winux11-shell"
+          test -x "$RUNNER_TEMP/winux11-root/bin/winux11-session"
           test -f "$RUNNER_TEMP/winux11-root/share/wayland-sessions/winux11.desktop"
+      - name: Session smoke
+        run: |
+          mkdir -p "$RUNNER_TEMP/winux11-runtime"
+          chmod 700 "$RUNNER_TEMP/winux11-runtime"
+          timeout 10s xvfb-run -a env XDG_RUNTIME_DIR="$RUNNER_TEMP/winux11-runtime" WINUX11_PREFIX="$RUNNER_TEMP/winux11-root" sh session/winux11-session || test "$?" = 124
