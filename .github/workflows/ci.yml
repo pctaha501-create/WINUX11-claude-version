@@ -19,7 +19,7 @@ jobs:
         run: cmake --install build --prefix "$RUNNER_TEMP/winux11-root"
       - name: Validate session
         run: |
+          sh -n session/winux11-session
+          sh -n installer/install.sh
           test -x "$RUNNER_TEMP/winux11-root/bin/winux11-compositor"
           test -f "$RUNNER_TEMP/winux11-root/share/wayland-sessions/winux11.desktop"
-          test -f session/winux11-session
-          test -f installer/install.sh
