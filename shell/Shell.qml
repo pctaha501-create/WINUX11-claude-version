@@ -11,13 +11,14 @@ ApplicationWindow{
    Item{Layout.fillWidth:true}Label{text:"Desktop "+(shellController.workspace+1)+"  •  "+Qt.formatDateTime(new Date(),"ddd HH:mm");color:"#e9edf7"}ToolButton{text:"⌁";onClicked:quick.visible=!quick.visible}
   }
  }
- Rectangle{id:start;visible:false;width:720;height:470;radius:20;anchors.horizontalCenter:parent.horizontalCenter;anchors.bottom:taskbar.top;anchors.bottomMargin:10;color:"#151820";border.color:"#343947"
+ Rectangle{id:start;visible:false;width:760;height:520;radius:20;anchors.horizontalCenter:parent.horizontalCenter;anchors.bottom:taskbar.top;anchors.bottomMargin:10;color:"#151820";border.color:"#343947"
   ColumnLayout{anchors.fill:parent;anchors.margins:20;spacing:9;Label{text:"WINUX11";font.pixelSize:28;color:"white"}Label{text:"Applications";color:"#aeb6c7"}
    GridLayout{columns:4;columnSpacing:8;rowSpacing:8
     Button{text:"Files";onClicked:shellController.command("launch Files")}Button{text:"Terminal";onClicked:shellController.command("launch Terminal")}Button{text:"Browser";onClicked:shellController.command("launch Browser")}Button{text:"Settings";onClicked:shellController.command("launch Settings")}
     Button{text:"Task Manager";onClicked:shellController.command("launch Task Manager")}Button{text:"Security";onClicked:shellController.command("launch Security Center")}Button{text:"Software Center";onClicked:shellController.command("launch Software Center")}Button{text:"Network";onClicked:shellController.command("launch Network")}
     Button{text:"Downloader";onClicked:shellController.command("launch Downloader")}Button{text:"Archive";onClicked:shellController.command("launch Archive Manager")}Button{text:"Screenshot";onClicked:shellController.command("launch Screenshot")}Button{text:"Calculator";onClicked:shellController.command("launch Calculator")}
-    Button{text:"Clock";onClicked:shellController.command("launch Clock")}Button{text:"Text Editor";onClicked:shellController.command("launch Text Editor")}
+    Button{text:"Clock";onClicked:shellController.command("launch Clock")}Button{text:"Text Editor";onClicked:shellController.command("launch Text Editor")}Button{text:"Photos";onClicked:shellController.command("launch Photos")}Button{text:"Media Player";onClicked:shellController.command("launch Media Player")}
+    Button{text:"Music";onClicked:shellController.command("launch Music")}Button{text:"Camera";onClicked:shellController.command("launch Camera")}Button{text:"Voice Recorder";onClicked:shellController.command("launch Voice Recorder")}
    }
   }
  }
