@@ -23,7 +23,7 @@ jobs:
           WINUX11_ISO_ENABLE: "1"
           WINUX11_BUILD_DIR: ${{ github.workspace }}/build
           WINUX11_ISO_OUTPUT: ${{ github.workspace }}/iso/out
-        run: ./iso/build.sh
+        run: sh ./iso/build.sh
       - name: Upload ISO
         uses: actions/upload-artifact@v4
         with:
