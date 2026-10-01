@@ -11,7 +11,11 @@ compositor="$prefix/bin/winux11-compositor"
 shell="$prefix/bin/winux11-shell"
 [ -x "$compositor" ] && [ -x "$shell" ] || { echo "WINUX11: compositor or shell is not installed" >&2; exit 1; }
 compositor_qpa="${WINUX11_COMPOSITOR_QPA_PLATFORM:-wayland}"
-QT_QPA_PLATFORM="$compositor_qpa" "$compositor" --wayland-socket-name="$WAYLAND_DISPLAY" &
+if [ -n "${WINUX11_COMPOSITOR_QT_QUICK_BACKEND:-}" ]; then
+  QT_QPA_PLATFORM="$compositor_qpa" QT_QUICK_BACKEND="$WINUX11_COMPOSITOR_QT_QUICK_BACKEND" "$compositor" --wayland-socket-name="$WAYLAND_DISPLAY" &
+else
+  QT_QPA_PLATFORM="$compositor_qpa" "$compositor" --wayland-socket-name="$WAYLAND_DISPLAY" &
+fi
 compositor_pid=$!
 cleanup(){ kill "$compositor_pid" 2>/dev/null || true; wait "$compositor_pid" 2>/dev/null || true; }
 trap cleanup INT TERM EXIT
