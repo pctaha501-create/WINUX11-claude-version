@@ -22,9 +22,11 @@ public:
  void setWorkspace(int value){m_workspace=value;}
  bool minimized()const{return m_minimized;}
  void setMinimized(bool v){m_minimized=v;}
+ void saveGeometry();void restoreGeometry();
 signals:void titleChanged();
 private:
- QPointer<QWaylandXdgToplevel> m_topLevel;QPointer<QWaylandQuickShellSurfaceItem> m_item;int m_workspace=0;bool m_minimized=false;
+ QPointer<QWaylandXdgToplevel> m_topLevel;QPointer<QWaylandQuickShellSurfaceItem> m_item;
+ int m_workspace=0;bool m_minimized=false;QRectF m_savedGeometry;bool m_hasSavedGeometry=false;
 };
 class WinuxCompositor final:public QWaylandCompositor{
  Q_OBJECT
@@ -37,6 +39,11 @@ public:
  Q_INVOKABLE void minimizeActive();
  Q_INVOKABLE void restoreWindow(int index);
  Q_INVOKABLE void closeActive();
+ Q_INVOKABLE void maximizeActive();
+ Q_INVOKABLE void toggleFullscreenActive();
+ Q_INVOKABLE void snapActive(const QString &side);
+ Q_INVOKABLE void moveActive(int dx,int dy);
+ Q_INVOKABLE void resizeActive(int dw,int dh);
  int activeWorkspace()const{return m_activeWorkspace;}
  void activate(WindowSurface *window);void moveWorkspace(WindowSurface *window,int workspace);void setWorkspace(int workspace);
 signals:void windowAdded(WindowSurface*);void windowRemoved(WindowSurface*);void activeWindowChanged(WindowSurface*);void workspaceChanged(int);void windowListChanged();
