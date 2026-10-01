@@ -1,4 +1,5 @@
 #include "shell_controller.h"
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QStandardPaths>
