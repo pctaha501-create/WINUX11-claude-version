@@ -1,4 +1,4 @@
-find_package(Qt6 6.4 COMPONENTS WebEngineQuick QUIET)
+find_package(Qt6WebEngineQuick 6.4 QUIET CONFIG)
 if(TARGET Qt6::WebEngineQuick)
   qt_add_executable(winux11-browser main.cpp)
   target_link_libraries(winux11-browser PRIVATE Qt6::Core Qt6::Gui Qt6::Quick Qt6::QuickControls2 Qt6::WebEngineQuick)
