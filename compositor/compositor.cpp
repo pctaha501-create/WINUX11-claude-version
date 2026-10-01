@@ -5,6 +5,8 @@
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QProcess>
+#include <QTimer>
+#include <QCoreApplication>
 #include <QWaylandOutputMode>
 #include <QDebug>
 WindowSurface::WindowSurface(QWaylandXdgToplevel *t,QObject *p):QObject(p),m_topLevel(t){connect(t,&QWaylandXdgToplevel::titleChanged,this,&WindowSurface::titleChanged);}
@@ -18,68 +20,28 @@ WinuxCompositor::WinuxCompositor(QObject *p):QWaylandCompositor(p),m_xdgShell(th
 void WinuxCompositor::create(){
  if(m_initialized)return;m_initialized=true;QWaylandCompositor::create();
  m_seat=new QWaylandSeat(this,QWaylandSeat::Pointer|QWaylandSeat::Keyboard);m_seat->initialize();
+ m_shellIpc=new ShellIpcServer(this,this);if(!m_shellIpc->start())qWarning()<<"WINUX11 shell IPC unavailable:"<<m_shellIpc->socketPath();
+ if(qEnvironmentVariableIsSet("WINUX11_HEADLESS_SMOKE")){
+  QTimer::singleShot(3000,qApp,&QCoreApplication::quit);
+  return;
+ }
  m_output=new QWaylandOutput(this,&m_window);const QWaylandOutputMode mode(QSize(1920,1080),60000);
- m_output->addMode(mode,true);m_output->setCurrentMode(mode);m_output->setPhysicalSize(QSize(600,340));m_output->setScaleFactor(1);m_output->setManufacturer("WINUX11");m_output->setModel("WINUX11 Virtual Display");
- m_shellIpc=new ShellIpcServer(this,this);if(!m_shellIpc->start())qWarning()<<"WINUX11 shell IPC unavailable:"<<m_shellIpc->socketPath();m_window.show();
+ m_output->addMode(mode,true);m_output->setCurrentMode(mode);m_output->setPhysicalSize(QSize(600,340));m_output->setScaleFactor(1);m_output->setManufacturer("WINUX11");m_output->setModel("WINUX11 Virtual Display");m_window.show();
 }
-QWaylandQuickShellSurfaceItem *WinuxCompositor::windowAt(const QPointF &pos)const{
- for(int n=m_windows.size()-1;n>=0;--n){auto *w=m_windows[n];if(!w||w->minimized()||w->workspace()!=m_activeWorkspace||!w->item()||!w->item()->isVisible())continue;auto *item=w->item();if(item->contains(item->mapFromScene(pos)))return item;}return nullptr;
-}
-WindowSurface *WinuxCompositor::surfaceAt(const QPointF &pos)const{
- auto *item=windowAt(pos);if(!item)return nullptr;for(auto *w:m_windows)if(w&&w->item()==item)return w;return nullptr;
-}
+QWaylandQuickShellSurfaceItem *WinuxCompositor::windowAt(const QPointF &pos)const{for(int n=m_windows.size()-1;n>=0;--n){auto *w=m_windows[n];if(!w||w->minimized()||w->workspace()!=m_activeWorkspace||!w->item()||!w->item()->isVisible())continue;auto *item=w->item();if(item->contains(item->mapFromScene(pos)))return item;}return nullptr;}
+WindowSurface *WinuxCompositor::surfaceAt(const QPointF &pos)const{auto *item=windowAt(pos);if(!item)return nullptr;for(auto *w:m_windows)if(w&&w->item()==item)return w;return nullptr;}
 void WinuxCompositor::finishPointerGrab(){m_pointerGrabWindow=nullptr;m_pointerMoveGrab=false;m_pointerResizeGrab=false;m_pointerGrabButton=Qt::NoButton;}
 bool WinuxCompositor::handlePointerEvent(QEvent *event){
  if(!m_seat)return false;
- if(event->type()==QEvent::MouseMove){
-  auto *e=static_cast<QMouseEvent*>(event);const QPointF pos=e->position();
-  if(m_pointerGrabWindow&&m_pointerGrabWindow->item()){
-   auto *item=m_pointerGrabWindow->item();const QPointF delta=pos-m_pointerGrabStart;auto g=m_pointerGrabGeometry;
-   if(m_pointerMoveGrab){item->setX(qBound(0.0,g.x()+delta.x(),double(m_window.width()-item->width())));item->setY(qBound(0.0,g.y()+delta.y(),double(m_window.height()-item->height())));}
-   else if(m_pointerResizeGrab){item->setWidth(qMax(200.0,g.width()+delta.x()));item->setHeight(qMax(120.0,g.height()+delta.y()));m_pointerGrabWindow->topLevel()->sendResizing(QSize(item->width(),item->height()));}
-   emit windowListChanged();return true;
-  }
-  auto *surface=surfaceAt(pos);if(surface){activate(surface);if(surface->item()&&surface->item()->view())m_seat->sendMouseMoveEvent(surface->item()->view(),surface->item()->mapFromScene(pos),pos);}return false;
- }
- if(event->type()==QEvent::MouseButtonPress){
-  auto *e=static_cast<QMouseEvent*>(event);auto *surface=surfaceAt(e->position());
-  if(surface)activate(surface);
-  if(surface&&e->modifiers().testFlag(Qt::MetaModifier)&&(e->button()==Qt::LeftButton||e->button()==Qt::RightButton)){
-   m_pointerGrabWindow=surface;m_pointerGrabStart=e->position();m_pointerGrabGeometry=QRectF(surface->item()->x(),surface->item()->y(),surface->item()->width(),surface->item()->height());
-   m_pointerGrabButton=e->button();m_pointerMoveGrab=e->button()==Qt::LeftButton;m_pointerResizeGrab=e->button()==Qt::RightButton;return true;
-  }
-  if(surface&&surface->item()&&surface->item()->view()){m_seat->sendMousePressEvent(e->button());return true;}return false;
- }
- if(event->type()==QEvent::MouseButtonRelease){
-  auto *e=static_cast<QMouseEvent*>(event);if(m_pointerGrabWindow){if(m_pointerGrabWindow->topLevel())m_pointerGrabWindow->topLevel()->sendConfigure(QSize(m_pointerGrabWindow->item()->width(),m_pointerGrabWindow->item()->height()),QList<QWaylandXdgToplevel::State>{QWaylandXdgToplevel::ActivatedState});finishPointerGrab();return true;}
-  if(m_seat->mouseFocus()){m_seat->sendMouseReleaseEvent(e->button());return true;}return false;
- }
- if(event->type()==QEvent::Wheel){
-  auto *e=static_cast<QWheelEvent*>(event);auto *surface=surfaceAt(e->position());if(surface){activate(surface);m_seat->sendMouseWheelEvent(e->angleDelta().y()!=0?Qt::Vertical:Qt::Horizontal,e->angleDelta().y()!=0?e->angleDelta().y():e->angleDelta().x());return true;}return false;
- }
+ if(event->type()==QEvent::MouseMove){auto *e=static_cast<QMouseEvent*>(event);const QPointF pos=e->position();if(m_pointerGrabWindow&&m_pointerGrabWindow->item()){auto *item=m_pointerGrabWindow->item();const QPointF delta=pos-m_pointerGrabStart;auto g=m_pointerGrabGeometry;if(m_pointerMoveGrab){item->setX(qBound(0.0,g.x()+delta.x(),double(m_window.width()-item->width())));item->setY(qBound(0.0,g.y()+delta.y(),double(m_window.height()-item->height())));}else if(m_pointerResizeGrab){item->setWidth(qMax(200.0,g.width()+delta.x()));item->setHeight(qMax(120.0,g.height()+delta.y()));m_pointerGrabWindow->topLevel()->sendResizing(QSize(item->width(),item->height()));}emit windowListChanged();return true;}auto *surface=surfaceAt(pos);if(surface){activate(surface);if(surface->item()&&surface->item()->view())m_seat->sendMouseMoveEvent(surface->item()->view(),surface->item()->mapFromScene(pos),pos);}return false;}
+ if(event->type()==QEvent::MouseButtonPress){auto *e=static_cast<QMouseEvent*>(event);auto *surface=surfaceAt(e->position());if(surface)activate(surface);if(surface&&e->modifiers().testFlag(Qt::MetaModifier)&&(e->button()==Qt::LeftButton||e->button()==Qt::RightButton)){m_pointerGrabWindow=surface;m_pointerGrabStart=e->position();m_pointerGrabGeometry=QRectF(surface->item()->x(),surface->item()->y(),surface->item()->width(),surface->item()->height());m_pointerGrabButton=e->button();m_pointerMoveGrab=e->button()==Qt::LeftButton;m_pointerResizeGrab=e->button()==Qt::RightButton;return true;}if(surface&&surface->item()&&surface->item()->view()){m_seat->sendMousePressEvent(e->button());return true;}return false;}
+ if(event->type()==QEvent::MouseButtonRelease){auto *e=static_cast<QMouseEvent*>(event);if(m_pointerGrabWindow){if(m_pointerGrabWindow->topLevel())m_pointerGrabWindow->topLevel()->sendConfigure(QSize(m_pointerGrabWindow->item()->width(),m_pointerGrabWindow->item()->height()),QList<QWaylandXdgToplevel::State>{QWaylandXdgToplevel::ActivatedState});finishPointerGrab();return true;}if(m_seat->mouseFocus()){m_seat->sendMouseReleaseEvent(e->button());return true;}return false;}
+ if(event->type()==QEvent::Wheel){auto *e=static_cast<QWheelEvent*>(event);auto *surface=surfaceAt(e->position());if(surface){activate(surface);m_seat->sendMouseWheelEvent(e->angleDelta().y()!=0?Qt::Vertical:Qt::Horizontal,e->angleDelta().y()!=0?e->angleDelta().y():e->angleDelta().x());return true;}return false;}
  return false;
 }
-bool WinuxCompositor::eventFilter(QObject *watched,QEvent *event){
- if(watched==&m_window){
-  if(handlePointerEvent(event))return true;
-  if(m_seat&&event->type()==QEvent::KeyPress){
-   auto *k=static_cast<QKeyEvent*>(event);const auto mods=k->modifiers();
-   if(mods.testFlag(Qt::ControlModifier)&&k->key()>=Qt::Key_F1&&k->key()<=Qt::Key_F4){setWorkspace(k->key()-Qt::Key_F1);return true;}
-   if(mods.testFlag(Qt::AltModifier)&&k->key()==Qt::Key_Tab){if(!m_windows.isEmpty()){int start=m_active?m_windows.indexOf(m_active):-1;for(int n=1;n<=m_windows.size();++n){int i=(start+n)%m_windows.size();if(m_windows[i]->workspace()==m_activeWorkspace&&!m_windows[i]->minimized()){activateIndex(i);break;}}}return true;}
-   if(mods.testFlag(Qt::MetaModifier)&&m_active){
-    if(mods.testFlag(Qt::ShiftModifier)){if(k->key()==Qt::Key_Left){resizeActive(-40,0);return true;}if(k->key()==Qt::Key_Right){resizeActive(40,0);return true;}if(k->key()==Qt::Key_Up){resizeActive(0,-40);return true;}if(k->key()==Qt::Key_Down){resizeActive(0,40);return true;}}
-    else{if(k->key()==Qt::Key_Left){snapActive("left");return true;}if(k->key()==Qt::Key_Right){snapActive("right");return true;}if(k->key()==Qt::Key_Up){maximizeActive();return true;}if(k->key()==Qt::Key_Down){minimizeActive();return true;}}
-   }
-   m_seat->sendFullKeyEvent(k);return true;
-  }
- }
- return QWaylandCompositor::eventFilter(watched,event);
-}
+bool WinuxCompositor::eventFilter(QObject *watched,QEvent *event){if(watched==&m_window){if(handlePointerEvent(event))return true;if(m_seat&&event->type()==QEvent::KeyPress){auto *k=static_cast<QKeyEvent*>(event);const auto mods=k->modifiers();if(mods.testFlag(Qt::ControlModifier)&&k->key()>=Qt::Key_F1&&k->key()<=Qt::Key_F4){setWorkspace(k->key()-Qt::Key_F1);return true;}if(mods.testFlag(Qt::AltModifier)&&k->key()==Qt::Key_Tab){if(!m_windows.isEmpty()){int start=m_active?m_windows.indexOf(m_active):-1;for(int n=1;n<=m_windows.size();++n){int i=(start+n)%m_windows.size();if(m_windows[i]->workspace()==m_activeWorkspace&&!m_windows[i]->minimized()){activateIndex(i);break;}}}return true;}if(mods.testFlag(Qt::MetaModifier)&&m_active){if(mods.testFlag(Qt::ShiftModifier)){if(k->key()==Qt::Key_Left){resizeActive(-40,0);return true;}if(k->key()==Qt::Key_Right){resizeActive(40,0);return true;}if(k->key()==Qt::Key_Up){resizeActive(0,-40);return true;}if(k->key()==Qt::Key_Down){resizeActive(0,40);return true;}}else{if(k->key()==Qt::Key_Left){snapActive("left");return true;}if(k->key()==Qt::Key_Right){snapActive("right");return true;}if(k->key()==Qt::Key_Up){maximizeActive();return true;}if(k->key()==Qt::Key_Down){minimizeActive();return true;}}}m_seat->sendFullKeyEvent(k);return true;}}return QWaylandCompositor::eventFilter(watched,event);}
 QVariantList WinuxCompositor::windowList()const{QVariantList out;for(auto *w:m_windows)if(w)out<<QVariant::fromValue(static_cast<QObject*>(w));return out;}
-void WinuxCompositor::activateIndex(int i){if(i>=0&&i<m_windows.size())activate(m_windows[i]);}
-bool WinuxCompositor::launchApplication(const QString &name){
- const QHash<QString,QString> apps{{"Terminal","winux11-terminal"},{"Files","winux11-explorer"},{"Settings","winux11-settings"},{"Task Manager","winux11-taskmanager"},{"Security Center","winux11-security"},{"Browser","winux11-browser"},{"Software Center","winux11-softwarecenter"},{"Network","winux11-network"},{"Downloader","winux11-downloader"},{"Archive Manager","winux11-archive"},{"Screenshot","winux11-screenshot"},{"Calculator","winux11-calculator"},{"Clock","winux11-clock"},{"Text Editor","winux11-editor"},{"Photos","winux11-photos"},{"Media Player","winux11-mediaplayer"},{"Music","winux11-music"},{"Camera","winux11-camera"},{"Voice Recorder","winux11-recorder"},{"Disk Management","winux11-systemtools disk"},{"Update Manager","winux11-systemtools updates"},{"Startup Apps","winux11-systemtools startup"},{"Printer Manager","winux11-systemtools printers"},{"Display Manager","winux11-systemtools display"},{"Sound Manager","winux11-systemtools sound"},{"Privacy Center","winux11-systemtools privacy"},{"Bluetooth Manager","winux11-systemtools bluetooth"},{"Wi-Fi Manager","winux11-systemtools wifi"}};auto it=apps.find(name);if(it==apps.end())return false;QStringList parts=it.value().split(' ',Qt::SkipEmptyParts);const QString program=parts.takeFirst();return QProcess::startDetached(program,parts);
-}
+bool WinuxCompositor::launchApplication(const QString &name){const QHash<QString,QString> apps{{"Terminal","winux11-terminal"},{"Files","winux11-explorer"},{"Settings","winux11-settings"},{"Task Manager","winux11-taskmanager"},{"Security Center","winux11-security"},{"Browser","winux11-browser"},{"Software Center","winux11-softwarecenter"},{"Network","winux11-network"},{"Downloader","winux11-downloader"},{"Archive Manager","winux11-archive"},{"Screenshot","winux11-screenshot"},{"Calculator","winux11-calculator"},{"Clock","winux11-clock"},{"Text Editor","winux11-editor"},{"Photos","winux11-photos"},{"Media Player","winux11-mediaplayer"},{"Music","winux11-music"},{"Camera","winux11-camera"},{"Voice Recorder","winux11-recorder"},{"Disk Management","winux11-systemtools disk"},{"Update Manager","winux11-systemtools updates"},{"Startup Apps","winux11-systemtools startup"},{"Printer Manager","winux11-systemtools printers"},{"Display Manager","winux11-systemtools display"},{"Sound Manager","winux11-systemtools sound"},{"Privacy Center","winux11-systemtools privacy"},{"Bluetooth Manager","winux11-systemtools bluetooth"},{"Wi-Fi Manager","winux11-systemtools wifi"}};auto it=apps.find(name);if(it==apps.end())return false;QStringList parts=it.value().split(' ',Qt::SkipEmptyParts);const QString program=parts.takeFirst();return QProcess::startDetached(program,parts);}
 void WinuxCompositor::minimizeActive(){if(!m_active||!m_active->item())return;m_active->setMinimized(true);m_active->item()->setVisible(false);m_active=nullptr;emit windowListChanged();}
 void WinuxCompositor::restoreWindow(int i){if(i<0||i>=m_windows.size())return;auto *w=m_windows[i];w->setMinimized(false);w->item()->setVisible(w->workspace()==m_activeWorkspace);activate(w);emit windowListChanged();}
 void WinuxCompositor::closeActive(){if(m_active&&m_active->topLevel())m_active->topLevel()->sendClose();}
@@ -88,7 +50,7 @@ void WinuxCompositor::toggleFullscreenActive(){if(!m_active||!m_active->item()||
 void WinuxCompositor::snapActive(const QString &side){if(!m_active||!m_active->item()||!m_active->topLevel())return;auto *i=m_active->item();m_active->saveGeometry();const qreal w=m_window.width()/2.0;if(side=="left"){i->setX(0);i->setY(0);i->setWidth(w);i->setHeight(m_window.height()-86);}else if(side=="right"){i->setX(w);i->setY(0);i->setWidth(w);i->setHeight(m_window.height()-86);}else return;m_active->topLevel()->sendConfigure(QSize(i->width(),i->height()),QList<QWaylandXdgToplevel::State>{QWaylandXdgToplevel::ActivatedState});emit windowListChanged();}
 void WinuxCompositor::moveActive(int dx,int dy){if(!m_active||!m_active->item())return;auto *i=m_active->item();i->setX(qBound(0.0,i->x()+dx,double(m_window.width()-i->width())));i->setY(qBound(0.0,i->y()+dy,double(m_window.height()-i->height())));emit windowListChanged();}
 void WinuxCompositor::resizeActive(int dw,int dh){if(!m_active||!m_active->item())return;auto *i=m_active->item();i->setWidth(qMax(200.0,i->width()+dw));i->setHeight(qMax(120.0,i->height()+dh));m_active->topLevel()->sendResizing(QSize(i->width(),i->height()));emit windowListChanged();}
-void WinuxCompositor::onNewToplevel(QWaylandXdgToplevel *t,QWaylandXdgSurface *s){Q_UNUSED(s);auto *w=new WindowSurface(t,this);m_windows.push_back(w);auto *item=new QWaylandQuickShellSurfaceItem(m_window.contentItem());item->setShellSurface(t->xdgSurface());item->setFocusOnClick(true);item->setAutoCreatePopupItems(true);item->setInputEventsEnabled(true);w->setItem(item);item->setZ(m_nextZ++);item->setX((m_window.width()-800)/2);item->setY((m_window.height()-600)/2);item->setWidth(800);item->setHeight(600);connect(t,&QObject::destroyed,this,&WinuxCompositor::onToplevelDestroyed);connect(t,&QWaylandXdgToplevel::activatedChanged,this,[this,w]{if(w->topLevel()&&w->topLevel()->activated())activate(w);});emit windowAdded(w);emit windowListChanged();activate(w);}
+void WinuxCompositor::onNewToplevel(QWaylandXdgToplevel *t,QWaylandXdgSurface *s){Q_UNUSED(s);auto *w=new WindowSurface(t,this);m_windows.push_back(w);if(!m_window.isVisible())return;auto *item=new QWaylandQuickShellSurfaceItem(m_window.contentItem());item->setShellSurface(t->xdgSurface());item->setFocusOnClick(true);item->setAutoCreatePopupItems(true);item->setInputEventsEnabled(true);w->setItem(item);item->setZ(m_nextZ++);item->setX((m_window.width()-800)/2);item->setY((m_window.height()-600)/2);item->setWidth(800);item->setHeight(600);connect(t,&QObject::destroyed,this,&WinuxCompositor::onToplevelDestroyed);connect(t,&QWaylandXdgToplevel::activatedChanged,this,[this,w]{if(w->topLevel()&&w->topLevel()->activated())activate(w);});emit windowAdded(w);emit windowListChanged();activate(w);}
 void WinuxCompositor::onToplevelDestroyed(){for(int i=m_windows.size()-1;i>=0;--i){if(!m_windows[i]->topLevel()){auto *r=m_windows.takeAt(i);if(m_active==r)m_active=nullptr;emit windowRemoved(r);r->deleteLater();}}emit windowListChanged();}
 void WinuxCompositor::activate(WindowSurface *w){if(!w||!w->topLevel()||w->workspace()!=m_activeWorkspace||w->minimized())return;if(m_active==w){if(w->item())w->item()->setZ(m_nextZ++);return;}if(m_active&&m_active->topLevel())m_active->topLevel()->sendConfigure(QSize(),QList<QWaylandXdgToplevel::State>{});m_active=w;if(w->item())w->item()->setZ(m_nextZ++);if(m_seat&&w->topLevel()->xdgSurface()&&w->topLevel()->xdgSurface()->surface())m_seat->setKeyboardFocus(w->topLevel()->xdgSurface()->surface());w->topLevel()->sendConfigure(QSize(),QList<QWaylandXdgToplevel::State>{QWaylandXdgToplevel::ActivatedState});emit activeWindowChanged(w);emit windowListChanged();}
 void WinuxCompositor::moveWorkspace(WindowSurface *w,int ws){if(!w||!w->item()||ws<0)return;w->setWorkspace(ws);w->item()->setVisible(ws==m_activeWorkspace&&!w->minimized());emit windowListChanged();}

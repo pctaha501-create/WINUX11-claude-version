@@ -25,5 +25,9 @@ for i in $(seq 1 100); do
   sleep .05
 done
 [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ] || { echo "WINUX11: compositor Wayland socket did not become ready" >&2; exit 1; }
+if [ "${WINUX11_HEADLESS_SMOKE:-0}" = "1" ]; then
+  wait "$compositor_pid"
+  exit 0
+fi
 export QT_QPA_PLATFORM=wayland
 exec "$shell"
