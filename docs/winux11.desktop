@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=WINUX11
+Comment=WINUX11 desktop environment
+Exec=winux11-compositor
+Type=Application
+NoDisplay=true
