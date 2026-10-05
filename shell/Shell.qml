@@ -25,6 +25,19 @@ ApplicationWindow{
   }
  }
  Rectangle{id:search;visible:false;width:620;height:80;radius:18;anchors.horizontalCenter:parent.horizontalCenter;anchors.top:parent.top;anchors.topMargin:24;color:"#151820";border.color:"#343947";TextField{anchors.fill:parent;anchors.margins:10;placeholderText:"Application name";onAccepted:shellController.command("launch "+text)}}
+ 
+ Rectangle{id:clipboard;visible:false;width:460;height:300;radius:18;anchors.right:parent.right;anchors.bottom:taskbar.top;anchors.rightMargin:18;anchors.bottomMargin:10;color:"#151820";border.color:"#343947"
+  Column{anchors.fill:parent;anchors.margins:16;spacing:10
+   Label{text:"Clipboard";font.pixelSize:22;color:"white"}
+   TextArea{id:clipText;Layout.fillWidth:true;Layout.fillHeight:true;text:shellController.clipboardText();color:"white";background:Rectangle{color:"#0d1017";radius:10};wrapMode:TextEdit.Wrap}
+   Row{spacing:8
+    Button{text:"Copy";onClicked:shellController.setClipboardText(clipText.text)}
+    Button{text:"Refresh";onClicked:clipText.text=shellController.clipboardText()}
+    Button{text:"Clear";onClicked:{shellController.clearClipboard();clipText.text=""}}
+   }
+  }
+ }
+
  Rectangle{id:quick;visible:false;width:300;height:190;radius:18;anchors.right:parent.right;anchors.bottom:taskbar.top;anchors.rightMargin:18;anchors.bottomMargin:10;color:"#151820";border.color:"#343947"
   Column{anchors.fill:parent;anchors.margins:16;spacing:9;Label{text:"Quick Settings";color:"white"}Button{text:"Network";onClicked:shellController.command("launch Network")}Button{text:"Sound";onClicked:shellController.command("launch Sound Manager")}Button{text:"Display";onClicked:shellController.command("launch Display Manager")}Label{text:"Ctrl+F1..F4  •  Alt+Tab  •  Super+Arrows";color: "white"}}
  }

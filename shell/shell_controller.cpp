@@ -3,7 +3,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QStandardPaths>
-ShellController::ShellController(QObject *p):QObject(p){connect(&m_socket,&QLocalSocket::readyRead,this,&ShellController::readState);connect(&m_socket,&QLocalSocket::errorOccurred,this,[this]{emit connectionFailed(m_socket.errorString());});}
+#include <QGuiApplication>
+ShellController::ShellController(QObject *p):QObject(p){connect(&m_socket,&QLocalSocket::readyRead,this,&ShellController::readState);connect(&m_socket,&QLocalSocket::errorOccurred,this,[this]{emit connectionFailed(m_socket.errorString());}); if (auto *cb=QGuiApplication::clipboard()) connect(cb,&QClipboard::dataChanged,this,&ShellController::clipboardChanged);}
 bool ShellController::connectToCompositor(){
  const QString runtime=QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
  const QString path=(runtime.isEmpty()?QStringLiteral("/tmp"):runtime)+"/winux11-shell.sock";
@@ -18,3 +19,14 @@ void ShellController::readState(){
  }
 }
 void ShellController::command(const QString &line){if(m_socket.state()==QLocalSocket::ConnectedState)m_socket.write(line.toUtf8()+"\n");}
+
+QString ShellController::clipboardText() const {
+    const auto *cb = QGuiApplication::clipboard();
+    return cb ? cb->text(QClipboard::Clipboard) : QString();
+}
+void ShellController::setClipboardText(const QString &text) {
+    if (auto *cb = QGuiApplication::clipboard()) cb->setText(text, QClipboard::Clipboard);
+}
+void ShellController::clearClipboard() {
+    if (auto *cb = QGuiApplication::clipboard()) cb->clear(QClipboard::Clipboard);
+}
