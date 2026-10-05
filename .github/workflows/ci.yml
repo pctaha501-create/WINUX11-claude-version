@@ -22,7 +22,7 @@ jobs:
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DWINUX11_BUILD_TESTS=ON
       - name: QML lint
         run: |
-          find applications shell -name "*.qml" -print0 | xargs -0 /usr/lib/qt6/bin/qmllint -I /usr/lib/x86_64-linux-gnu/qt6/qml --max-warnings 999999
+          find applications shell -name "*.qml" -print0 | xargs -0 /usr/lib/qt6/bin/qmllint -I /usr/lib/x86_64-linux-gnu/qt6/qml
       - name: Build
         run: cmake --build build --parallel
       - name: Test
