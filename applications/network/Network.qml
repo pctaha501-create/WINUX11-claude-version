@@ -7,7 +7,7 @@ ApplicationWindow {
  width: 820
  height: 520
  title: "WINUX11 Network"
- color: "#090b10"
+ color: "white"
  ColumnLayout {
   anchors.fill: parent
   anchors.margins: 22
