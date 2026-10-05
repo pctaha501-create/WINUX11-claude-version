@@ -6,6 +6,7 @@
 #include <QWheelEvent>
 #include <QProcess>
 #include <QFileInfo>
+#include <QDir>
 #include <QStandardPaths>
 #include <QTimer>
 #include <QCoreApplication>
