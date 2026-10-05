@@ -9,11 +9,11 @@ ApplicationWindow{
   RowLayout{anchors.fill:parent;anchors.margins:8;spacing:5
    ToolButton{text:"⊞";font.pixelSize:25;onClicked:start.visible=!start.visible}ToolButton{text:"⌕";font.pixelSize:22;onClicked:search.visible=!search.visible}
    Repeater{model:shellController.windows;delegate:ToolButton{text:modelData.title||"Window";onClicked:shellController.command("activate "+index)}}
-   Item{Layout.fillWidth:true}Label{text:"Desktop "+(shellController.workspace+1)+"  •  "+Qt.formatDateTime(new Date(),"ddd HH:mm");color:"#e9edf7"}ToolButton{text:"⌁";onClicked:quick.visible=!quick.visible}
+   Item{Layout.fillWidth:true}Label{text:"Desktop "+(shellController.workspace+1)+"  •  "+Qt.formatDateTime(new Date(),"ddd HH:mm");color:"white"}ToolButton{text:"⌁";onClicked:quick.visible=!quick.visible}
   }
  }
  Rectangle{id:start;visible:false;width:850;height:560;radius:20;anchors.horizontalCenter:parent.horizontalCenter;anchors.bottom:taskbar.top;anchors.bottomMargin:10;color:"#151820";border.color:"#343947"
-  ColumnLayout{anchors.fill:parent;anchors.margins:20;spacing:9;Label{text:"WINUX11";font.pixelSize:28;color:"white"}Label{text:"Applications";color:"#aeb6c7"}
+  ColumnLayout{anchors.fill:parent;anchors.margins:20;spacing:9;Label{text:"WINUX11";font.pixelSize:28;color:"white"}Label{text:"Applications";color:"white"}
    GridLayout{columns:5;columnSpacing:8;rowSpacing:8
     Button{text:"Files";onClicked:shellController.command("launch Files")}Button{text:"Terminal";onClicked:shellController.command("launch Terminal")}Button{text:"Browser";onClicked:shellController.command("launch Browser")}Button{text:"Settings";onClicked:shellController.command("launch Settings")}Button{text:"Task Manager";onClicked:shellController.command("launch Task Manager")}
     Button{text:"Security";onClicked:shellController.command("launch Security Center")}Button{text:"Software";onClicked:shellController.command("launch Software Center")}Button{text:"Network";onClicked:shellController.command("launch Network")}Button{text:"Downloader";onClicked:shellController.command("launch Downloader")}Button{text:"Archive";onClicked:shellController.command("launch Archive Manager")}
