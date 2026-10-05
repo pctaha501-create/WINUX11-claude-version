@@ -12,7 +12,7 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          pkgs="build-essential cmake ninja-build pkg-config libxkbcommon-dev qt6-base-dev qt6-declarative-dev qt6-wayland-dev qt6-wayland"
+          pkgs="build-essential cmake ninja-build pkg-config libxkbcommon-dev qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools qt6-wayland-dev qt6-wayland"
           sudo apt-get install --no-install-recommends -y $pkgs || {
             sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=15 update
             sudo apt-get install --no-install-recommends -y $pkgs
@@ -20,6 +20,9 @@ jobs:
           test -f /usr/lib/x86_64-linux-gnu/qt6/plugins/wayland-graphics-integration-server/libqt-wayland-compositor-dmabuf-server-buffer.so
       - name: Configure
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DWINUX11_BUILD_TESTS=ON
+      - name: QML lint
+        run: |
+          find applications shell -name "*.qml" -print0 | xargs -0 qmllint --no-warnings
       - name: Build
         run: cmake --build build --parallel
       - name: Test
@@ -32,5 +35,6 @@ jobs:
           sh -n installer/install.sh
           test -x "$RUNNER_TEMP/winux11-root/bin/winux11-compositor"
           test -x "$RUNNER_TEMP/winux11-root/bin/winux11-shell"
+          test -x "$RUNNER_TEMP/winux11-root/bin/winux11-calendar"
           test -x "$RUNNER_TEMP/winux11-root/bin/winux11-session"
           test -f "$RUNNER_TEMP/winux11-root/share/wayland-sessions/winux11.desktop"
