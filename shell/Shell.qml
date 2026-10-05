@@ -29,7 +29,7 @@ ApplicationWindow{
  Rectangle{id:clipboard;visible:false;width:460;height:300;radius:18;anchors.right:parent.right;anchors.bottom:taskbar.top;anchors.rightMargin:18;anchors.bottomMargin:10;color:"#151820";border.color:"#343947"
   Column{anchors.fill:parent;anchors.margins:16;spacing:10
    Label{text:"Clipboard";font.pixelSize:22;color:"white"}
-   TextArea{id:clipText;Layout.fillWidth:true;Layout.fillHeight:true;text:shellController.clipboardText();color:"white";background:Rectangle{color:"#0d1017";radius:10};wrapMode:TextEdit.Wrap}
+   TextArea{id:clipText;width:parent.width;height:180;text:shellController.clipboardText();color:"white";background:Rectangle{color:"#0d1017";radius:10};wrapMode:TextEdit.Wrap}
    Row{spacing:8
     Button{text:"Copy";onClicked:shellController.setClipboardText(clipText.text)}
     Button{text:"Refresh";onClicked:clipText.text=shellController.clipboardText()}
