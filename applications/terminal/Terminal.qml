@@ -1,12 +1,13 @@
 import QtQuick
 import QtQuick.Controls
 ApplicationWindow {
+ palette.windowText: "white"; palette.text: "white"; palette.buttonText: "white"; palette.brightText: "white"; palette.highlightedText: "white"; palette.placeholderText: "white"
     visible: true; width: 900; height: 600
     title: "WINUX11 Terminal"; color: "#090b10"
     TextArea {
         id: output
         anchors.fill: parent; anchors.margins: 10
-        color: "#e8edf7"; background: Rectangle { color: "#0d1017" }
+        color: "white"; background: Rectangle { color: "#0d1017" }
         font.family: "monospace"; wrapMode: TextArea.NoWrap
         readOnly: false; focus: true
         Keys.onPressed: function(event) {

@@ -6,6 +6,7 @@ export XDG_SESSION_DESKTOP=WINUX11
 export XDG_SESSION_TYPE=wayland
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-winux11}"
+export PATH="$prefix/bin:$PATH"
 [ -d "$XDG_RUNTIME_DIR" ] || { echo "WINUX11: XDG_RUNTIME_DIR is unavailable" >&2; exit 1; }
 compositor="$prefix/bin/winux11-compositor"
 shell="$prefix/bin/winux11-shell"

@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 ApplicationWindow {
+ palette.windowText: "white"; palette.text: "white"; palette.buttonText: "white"; palette.brightText: "white"; palette.highlightedText: "white"; palette.placeholderText: "white"
  visible: true
  width: 900
  height: 600
@@ -16,6 +17,6 @@ ApplicationWindow {
    Layout.fillWidth: true
    Button { text: "Refresh"; onClicked: output.text = systemTools.query(toolMode) }
   }
-  TextArea { id: output; Layout.fillWidth: true; Layout.fillHeight: true; readOnly: true; color: "#e8edf7"; text: systemTools.query(toolMode); wrapMode: TextEdit.Wrap }
+  TextArea { id: output; Layout.fillWidth: true; Layout.fillHeight: true; readOnly: true; color: "white"; text: systemTools.query(toolMode); wrapMode: TextEdit.Wrap }
  }
 }

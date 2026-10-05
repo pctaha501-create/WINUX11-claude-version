@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 ApplicationWindow {
+ palette.windowText: "white"; palette.text: "white"; palette.buttonText: "white"; palette.brightText: "white"; palette.highlightedText: "white"; palette.placeholderText: "white"
     visible: true
     width: 900; height: 650
     title: "WINUX11 Task Manager"
@@ -23,9 +24,9 @@ ApplicationWindow {
                 width: list.width; height: 42; color: index % 2 ? "#10141c" : "#0d1118"
                 RowLayout {
                     anchors.fill: parent; anchors.margins: 8
-                    Label { Layout.preferredWidth: 90; text: modelData.pid; color: "#cdd5e5" }
+                    Label { Layout.preferredWidth: 90; text: modelData.pid; color: "white" }
                     Label { Layout.fillWidth: true; text: modelData.name; color: "white"; elide: Text.ElideRight }
-                    Label { Layout.preferredWidth: 120; text: modelData.state; color: "#9ba7ba" }
+                    Label { Layout.preferredWidth: 120; text: modelData.state; color: "white" }
                     Button { text: "End"; onClicked: { processService.terminateProcess(modelData.pid); rows = processService.processes() } }
                 }
             }

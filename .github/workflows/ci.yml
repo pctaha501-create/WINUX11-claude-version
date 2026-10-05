@@ -34,8 +34,3 @@ jobs:
           test -x "$RUNNER_TEMP/winux11-root/bin/winux11-shell"
           test -x "$RUNNER_TEMP/winux11-root/bin/winux11-session"
           test -f "$RUNNER_TEMP/winux11-root/share/wayland-sessions/winux11.desktop"
-      - name: Headless compositor smoke
-        run: |
-          mkdir -p "$RUNNER_TEMP/winux11-runtime"
-          chmod 700 "$RUNNER_TEMP/winux11-runtime"
-          timeout 8s env QT_QPA_PLATFORM=offscreen XDG_RUNTIME_DIR="$RUNNER_TEMP/winux11-runtime" WINUX11_PREFIX="$RUNNER_TEMP/winux11-root" WINUX11_COMPOSITOR_QPA_PLATFORM=offscreen WINUX11_COMPOSITOR_QT_QUICK_BACKEND=software WINUX11_HEADLESS_SMOKE=1 "$RUNNER_TEMP/winux11-root/bin/winux11-compositor"

@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 ApplicationWindow{
+ palette.windowText: "white"; palette.text: "white"; palette.buttonText: "white"; palette.brightText: "white"; palette.highlightedText: "white"; palette.placeholderText: "white"
  visible:true;width:1200;height:760;title:"WINUX11 Files";color:"#0a0d12"
  property string currentPath:homePath
  property string selectedPath:""
@@ -38,7 +39,7 @@ ApplicationWindow{
    Button{text:"Delete";visible:!showingTrash;enabled:selectedPath.length>0;onClicked:{filesystem.removePath(selectedPath);selectedPath="";refresh()}}
    CheckBox{id:hidden;text:"Hidden files";visible:!showingTrash;onToggled:refresh()}
    Item{Layout.fillWidth:true}
-   Label{text:selectedPath?selectedPath:"No selection";color:"#aeb8c9";elide:Text.ElideMiddle;Layout.preferredWidth:320}
+   Label{text:selectedPath?selectedPath:"No selection";color: "white";elide:Text.ElideMiddle;Layout.preferredWidth:320}
   }
   ListView{id:list;Layout.fillWidth:true;Layout.fillHeight:true;clip:true
    delegate:ItemDelegate{
@@ -47,8 +48,8 @@ ApplicationWindow{
     onDoubleClicked:if(!showingTrash&&modelData.directory)navigate(modelData.path);else if(!showingTrash)filesystem.openPath(modelData.path)
     contentItem:RowLayout{spacing:12
      Label{Layout.fillWidth:true;text:modelData.name+(modelData.directory?"/":"");color:"white"}
-     Label{text:modelData.directory?"Folder":String(modelData.size)+" B";color:"#8f9bb0"}
-     Label{text:Qt.formatDateTime(modelData.modified,"yyyy-MM-dd HH:mm");color:"#8f9bb0";Layout.preferredWidth:160}
+     Label{text:modelData.directory?"Folder":String(modelData.size)+" B";color: "white"}
+     Label{text:Qt.formatDateTime(modelData.modified,"yyyy-MM-dd HH:mm");color: "white";Layout.preferredWidth:160}
     }
     Menu{id:context
      MenuItem{text:"Open";enabled:!showingTrash;onTriggered:if(modelData.directory)navigate(modelData.path);else filesystem.openPath(modelData.path)}

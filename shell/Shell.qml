@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 ApplicationWindow{
+ palette.windowText: "white"; palette.text: "white"; palette.buttonText: "white"; palette.brightText: "white"; palette.highlightedText: "white"; palette.placeholderText: "white"
  visible:true;visibility:Window.FullScreen;title:"WINUX11 Shell";color:"#090b10";flags:Qt.FramelessWindowHint
  Rectangle{anchors.fill:parent;color:"#090b10"}
  Rectangle{id:taskbar;width:parent.width*.60;height:58;radius:29;anchors.bottom:parent.bottom;anchors.horizontalCenter:parent.horizontalCenter;anchors.bottomMargin:14;color:"#171a22";border.color:"#343947"
@@ -25,6 +26,6 @@ ApplicationWindow{
  }
  Rectangle{id:search;visible:false;width:620;height:80;radius:18;anchors.horizontalCenter:parent.horizontalCenter;anchors.top:parent.top;anchors.topMargin:24;color:"#151820";border.color:"#343947";TextField{anchors.fill:parent;anchors.margins:10;placeholderText:"Application name";onAccepted:shellController.command("launch "+text)}}
  Rectangle{id:quick;visible:false;width:300;height:190;radius:18;anchors.right:parent.right;anchors.bottom:taskbar.top;anchors.rightMargin:18;anchors.bottomMargin:10;color:"#151820";border.color:"#343947"
-  Column{anchors.fill:parent;anchors.margins:16;spacing:9;Label{text:"Quick Settings";color:"white"}Button{text:"Network";onClicked:shellController.command("launch Network")}Button{text:"Sound";onClicked:shellController.command("launch Sound Manager")}Button{text:"Display";onClicked:shellController.command("launch Display Manager")}Label{text:"Ctrl+F1..F4  •  Alt+Tab  •  Super+Arrows";color:"#9ca8bb"}}
+  Column{anchors.fill:parent;anchors.margins:16;spacing:9;Label{text:"Quick Settings";color:"white"}Button{text:"Network";onClicked:shellController.command("launch Network")}Button{text:"Sound";onClicked:shellController.command("launch Sound Manager")}Button{text:"Display";onClicked:shellController.command("launch Display Manager")}Label{text:"Ctrl+F1..F4  •  Alt+Tab  •  Super+Arrows";color: "white"}}
  }
 }

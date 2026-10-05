@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtWebEngine
 ApplicationWindow{
+ palette.windowText: "white"; palette.text: "white"; palette.buttonText: "white"; palette.brightText: "white"; palette.highlightedText: "white"; palette.placeholderText: "white"
  visible:true;width:1280;height:820;title:"WINUX11 Browser";color:"#090b10"
  property int currentTab:0
  property var tabs:[]
