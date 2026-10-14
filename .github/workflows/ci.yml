@@ -36,7 +36,21 @@ jobs:
           done < <(find applications shell -name "*.qml" -print0)
           exit "$status"
       - name: Build
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DWINUX11_BUILD_TESTS=ON && cmake --build build --parallel
+        shell: bash
+        run: |
+          if ! cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DWINUX11_BUILD_TESTS=ON > configure.log 2>&1; then
+            tail -n 40 configure.log
+            details=$(tail -n 25 configure.log | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')
+            printf '::error::CMake configure failed: %s\n' "$details"
+            exit 1
+          fi
+          if ! cmake --build build --parallel 2 > build.log 2>&1; then
+            tail -n 40 build.log
+            details=$(tail -n 25 build.log | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')
+            printf '::error::CMake build failed: %s\n' "$details"
+            exit 1
+          fi
+          tail -n 20 build.log
       - name: Test
         run: ctest --test-dir build --output-on-failure
       - name: Install validation
