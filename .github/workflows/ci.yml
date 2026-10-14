@@ -12,7 +12,7 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          pkgs="build-essential cmake ninja-build pkg-config libxkbcommon-dev qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools qt6-wayland-dev qt6-wayland qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts qml6-module-qtwebengine"
+          pkgs="build-essential cmake ninja-build pkg-config libxkbcommon-dev qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools qt6-wayland-dev qt6-wayland xvfb xauth qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts qml6-module-qtwebengine"
           sudo apt-get install --no-install-recommends -y $pkgs || {
             sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=15 update
             sudo apt-get install --no-install-recommends -y $pkgs
@@ -22,7 +22,7 @@ jobs:
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DWINUX11_BUILD_TESTS=ON
       - name: QML lint
         run: |
-          find applications shell -name "*.qml" -print0 | xargs -0 /usr/lib/qt6/bin/qmllint -I /usr/lib/x86_64-linux-gnu/qt6/qml
+          find applications shell -name "*.qml" -print0 | xargs -0 /usr/lib/qt6/bin/qmllint -I /usr/lib/qt6/qml -I /usr/lib/x86_64-linux-gnu/qt6/qml
       - name: Build
         run: cmake --build build --parallel
       - name: Test
@@ -37,4 +37,9 @@ jobs:
           test -x "$RUNNER_TEMP/winux11-root/bin/winux11-shell"
           test -x "$RUNNER_TEMP/winux11-root/bin/winux11-calendar"
           test -x "$RUNNER_TEMP/winux11-root/bin/winux11-session"
-          test -f "$RUNNER_TEMP/winux11-root/share/wayland-sessions/winux11.desktop"
+          test -f "$RUNNER_TEMP/winux11-root/share/xsessions/winux11.desktop"
+          test -f "$RUNNER_TEMP/winux11-root/share/wayland-sessions/winux11-wayland.desktop"
+      - name: Smoke test WINUX11 session startup
+        env:
+          WINUX11_PREFIX: ${{ runner.temp }}/winux11-root
+        run: tests/session_smoke.sh

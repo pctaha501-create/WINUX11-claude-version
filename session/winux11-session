@@ -1,34 +1,96 @@
 #!/bin/sh
 set -eu
+
 prefix="${WINUX11_PREFIX:-/usr}"
+target_display="${WINUX11_WAYLAND_DISPLAY:-wayland-winux11}"
+parent_wayland_display="${WAYLAND_DISPLAY:-}"
 export XDG_CURRENT_DESKTOP=WINUX11
 export XDG_SESSION_DESKTOP=WINUX11
-export XDG_SESSION_TYPE=wayland
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-winux11}"
 export PATH="$prefix/bin:$PATH"
-[ -d "$XDG_RUNTIME_DIR" ] || { echo "WINUX11: XDG_RUNTIME_DIR is unavailable" >&2; exit 1; }
+
+state_home="${XDG_STATE_HOME:-${HOME:-/tmp}/.local/state}"
+log_dir="$state_home/winux11"
+if mkdir -p "$log_dir" 2>/dev/null; then
+    log_file="$log_dir/session.log"
+else
+    log_file="${TMPDIR:-/tmp}/winux11-session-$(id -u).log"
+fi
+exec 3>&1 4>&2
+exec >>"$log_file" 2>&1
+log() { printf '%s [WINUX11] %s\n' "$(date '+%Y-%m-%d %H:%M:%S' 2>/dev/null || printf 'time-unknown')" "$*"; }
+fail() { log "ERROR: $*"; printf 'WINUX11: %s\nLog: %s\n' "$*" "$log_file" >&4; exit 1; }
+
+[ -d "$XDG_RUNTIME_DIR" ] || fail "XDG_RUNTIME_DIR is unavailable: $XDG_RUNTIME_DIR"
+[ -n "$target_display" ] || fail "WINUX11_WAYLAND_DISPLAY must not be empty"
+case "$target_display" in */*) fail "WINUX11_WAYLAND_DISPLAY must be a socket name, not a path" ;; esac
 compositor="$prefix/bin/winux11-compositor"
 shell="$prefix/bin/winux11-shell"
-[ -x "$compositor" ] && [ -x "$shell" ] || { echo "WINUX11: compositor or shell is not installed" >&2; exit 1; }
-compositor_qpa="${WINUX11_COMPOSITOR_QPA_PLATFORM:-wayland}"
-if [ -n "${WINUX11_COMPOSITOR_QT_QUICK_BACKEND:-}" ]; then
-  QT_QPA_PLATFORM="$compositor_qpa" QT_QUICK_BACKEND="$WINUX11_COMPOSITOR_QT_QUICK_BACKEND" "$compositor" --wayland-socket-name="$WAYLAND_DISPLAY" &
+[ -x "$compositor" ] || fail "compositor is not installed at $compositor"
+[ -x "$shell" ] || fail "shell is not installed at $shell"
+
+# Render the compositor through the host display, but expose a separate
+# Wayland socket for applications running inside WINUX11.
+if [ -n "${WINUX11_COMPOSITOR_QPA_PLATFORM:-}" ]; then
+    compositor_qpa="$WINUX11_COMPOSITOR_QPA_PLATFORM"
+elif [ -n "${DISPLAY:-}" ]; then
+    compositor_qpa=xcb
+elif [ -n "$parent_wayland_display" ] && [ "$parent_wayland_display" != "$target_display" ]; then
+    compositor_qpa=wayland
 else
-  QT_QPA_PLATFORM="$compositor_qpa" "$compositor" --wayland-socket-name="$WAYLAND_DISPLAY" &
+    compositor_qpa=eglfs
+fi
+log "Starting compositor with QPA=$compositor_qpa, socket=$target_display, runtime=$XDG_RUNTIME_DIR"
+
+if [ "$compositor_qpa" = wayland ]; then
+    [ -n "$parent_wayland_display" ] && [ "$parent_wayland_display" != "$target_display" ] || fail "Wayland backend needs a host WAYLAND_DISPLAY different from the WINUX11 socket"
+    if [ -n "${WINUX11_COMPOSITOR_QT_QUICK_BACKEND:-}" ]; then
+        WAYLAND_DISPLAY="$parent_wayland_display" QT_QPA_PLATFORM=wayland QT_QUICK_BACKEND="$WINUX11_COMPOSITOR_QT_QUICK_BACKEND" "$compositor" --wayland-socket-name="$target_display" &
+    else
+        WAYLAND_DISPLAY="$parent_wayland_display" QT_QPA_PLATFORM=wayland "$compositor" --wayland-socket-name="$target_display" &
+    fi
+else
+    if [ -n "${WINUX11_COMPOSITOR_QT_QUICK_BACKEND:-}" ]; then
+        QT_QPA_PLATFORM="$compositor_qpa" QT_QUICK_BACKEND="$WINUX11_COMPOSITOR_QT_QUICK_BACKEND" "$compositor" --wayland-socket-name="$target_display" &
+    else
+        QT_QPA_PLATFORM="$compositor_qpa" "$compositor" --wayland-socket-name="$target_display" &
+    fi
 fi
 compositor_pid=$!
-cleanup(){ kill "$compositor_pid" 2>/dev/null || true; wait "$compositor_pid" 2>/dev/null || true; }
-trap cleanup INT TERM EXIT
-for i in $(seq 1 100); do
-  [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ] && break
-  kill -0 "$compositor_pid" 2>/dev/null || exit 1
-  sleep .05
+cleanup() {
+    if [ -n "${compositor_pid:-}" ]; then
+        kill "$compositor_pid" 2>/dev/null || true
+        wait "$compositor_pid" 2>/dev/null || true
+        compositor_pid=
+    fi
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+ready=0
+for i in $(seq 1 300); do
+    if [ -S "$XDG_RUNTIME_DIR/$target_display" ]; then ready=1; break; fi
+    kill -0 "$compositor_pid" 2>/dev/null || fail "compositor exited before its Wayland socket became ready; inspect $log_file"
+    sleep 0.05
 done
-[ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ] || { echo "WINUX11: compositor Wayland socket did not become ready" >&2; exit 1; }
-if [ "${WINUX11_HEADLESS_SMOKE:-0}" = "1" ]; then
-  wait "$compositor_pid"
-  exit 0
+[ "$ready" -eq 1 ] || fail "Wayland socket did not become ready within 15 seconds: $XDG_RUNTIME_DIR/$target_display"
+log "Compositor socket is ready"
+
+if [ "${WINUX11_HEADLESS_SMOKE:-0}" = 1 ]; then
+    wait "$compositor_pid"
+    compositor_pid=
+    log "Headless smoke run completed"
+    exit 0
 fi
+
+export WAYLAND_DISPLAY="$target_display"
 export QT_QPA_PLATFORM=wayland
-exec "$shell"
+export XDG_SESSION_TYPE=wayland
+log "Starting WINUX11 shell"
+set +e
+"$shell"
+shell_status=$?
+set -e
+log "WINUX11 shell exited with status $shell_status"
+exit "$shell_status"

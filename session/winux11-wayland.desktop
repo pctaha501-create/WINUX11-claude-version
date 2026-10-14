@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=WINUX11 (Native Wayland)
+Comment=WINUX11 desktop session using the native graphics backend
+Exec=sh /usr/bin/winux11-session
+Type=Application
+DesktopNames=WINUX11
