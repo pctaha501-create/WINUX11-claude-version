@@ -18,7 +18,7 @@ void WindowSurface::saveGeometry(){if(!m_item||m_hasSavedGeometry)return;m_saved
 void WindowSurface::restoreGeometry(){if(!m_item||!m_hasSavedGeometry)return;m_item->setX(m_savedGeometry.x());m_item->setY(m_savedGeometry.y());m_item->setWidth(m_savedGeometry.width());m_item->setHeight(m_savedGeometry.height());m_hasSavedGeometry=false;}
 WinuxCompositor::WinuxCompositor(QObject *p):QWaylandCompositor(p),m_xdgShell(this){
  connect(&m_xdgShell,&QWaylandXdgShell::toplevelCreated,this,&WinuxCompositor::onNewToplevel);
- m_window.setTitle("WINUX11");m_window.setColor(QColor("#090b10"));m_window.resize(1920,1080);m_window.setMouseGrabEnabled(true);m_window.installEventFilter(this);
+ m_window.setTitle("WINUX11");m_window.setColor(QColor("#090b10"));m_window.resize(1280,720);m_window.installEventFilter(this);
 }
 void WinuxCompositor::create(){
  if(m_initialized)return;m_initialized=true;QWaylandCompositor::create();
@@ -28,8 +28,9 @@ void WinuxCompositor::create(){
   QTimer::singleShot(3000,qApp,&QCoreApplication::quit);
   return;
  }
- m_output=new QWaylandOutput(this,&m_window);m_output->setSizeFollowsWindow(true);const QWaylandOutputMode mode(QSize(1920,1080),60000);
- m_output->addMode(mode,true);m_output->setCurrentMode(mode);m_output->setPhysicalSize(QSize(600,340));m_output->setScaleFactor(1);m_output->setManufacturer("WINUX11");m_output->setModel("WINUX11 Virtual Display");m_window.show();
+ m_window.showFullScreen();
+ m_output=new QWaylandOutput(this,&m_window);m_output->setSizeFollowsWindow(true);const QSize outputSize=m_window.size().isValid()?m_window.size():QSize(1280,720);const QWaylandOutputMode mode(outputSize,60000);
+ m_output->addMode(mode,true);m_output->setCurrentMode(mode);m_output->setPhysicalSize(QSize(340,190));m_output->setScaleFactor(1);m_output->setManufacturer("WINUX11");m_output->setModel("WINUX11 Virtual Display");
 }
 QWaylandQuickShellSurfaceItem *WinuxCompositor::windowAt(const QPointF &pos)const{for(int n=m_windows.size()-1;n>=0;--n){auto *w=m_windows[n];if(!w||w->minimized()||w->workspace()!=m_activeWorkspace||!w->item()||!w->item()->isVisible())continue;auto *item=w->item();if(item->contains(item->mapFromScene(pos)))return item;}return nullptr;}
 WindowSurface *WinuxCompositor::surfaceAt(const QPointF &pos)const{auto *item=windowAt(pos);if(!item)return nullptr;for(auto *w:m_windows)if(w&&w->item()==item)return w;return nullptr;}
