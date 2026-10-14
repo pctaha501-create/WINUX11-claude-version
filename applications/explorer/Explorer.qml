@@ -22,7 +22,7 @@ ApplicationWindow{
  function openFile(path) {
   var lower = path.toLowerCase()
   if (lower.endsWith(".exe") || lower.endsWith(".msi")) {
-   actionStatus = wineManager.launch(path) ? "Started Windows app: " + path.split("/").pop() : "Could not launch Windows app. Install Wine in Software Center first."
+   actionStatus = wineManager.launch(path, [], "") ? "Started Windows app: " + path.split("/").pop() : "Could not launch Windows app. Install Wine in Software Center first."
   } else {
    actionStatus = filesystem.openPath(path) ? "Opening: " + path.split("/").pop() : "Could not open file."
   }
