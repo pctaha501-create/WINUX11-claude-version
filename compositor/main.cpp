@@ -23,7 +23,7 @@ int main(int argc, char **argv)
     parser.process(app);
 
     WinuxCompositor compositor;
-    compositor.setSocketName(parser.value(socketOption));
+    compositor.setSocketName(parser.value(socketOption).toUtf8());
     compositor.create();
     return app.exec();
 }
