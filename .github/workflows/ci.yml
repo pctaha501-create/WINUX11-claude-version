@@ -56,15 +56,29 @@ jobs:
       - name: Install validation
         run: cmake --install build --prefix "$RUNNER_TEMP/winux11-root"
       - name: Validate session scripts
+        shell: bash
         run: |
-          sh -n session/winux11-session
-          sh -n installer/install.sh
-          test -x "$RUNNER_TEMP/winux11-root/bin/winux11-compositor"
-          test -x "$RUNNER_TEMP/winux11-root/bin/winux11-shell"
-          test -x "$RUNNER_TEMP/winux11-root/bin/winux11-calendar"
-          test -x "$RUNNER_TEMP/winux11-root/bin/winux11-session"
-          test -f "$RUNNER_TEMP/winux11-root/share/xsessions/winux11.desktop"
-          test -f "$RUNNER_TEMP/winux11-root/share/wayland-sessions/winux11-wayland.desktop"
+          set -eu
+          for script in session/winux11-session installer/install.sh; do
+            if ! sh -n "$script"; then
+              printf '::error file=%s,line=1::Shell syntax validation failed\n' "$script"
+              exit 1
+            fi
+          done
+          for executable in winux11-compositor winux11-shell winux11-calendar winux11-session; do
+            path="$RUNNER_TEMP/winux11-root/bin/$executable"
+            if [ ! -x "$path" ]; then
+              printf '::error file=.github/workflows/ci.yml,line=1::Expected executable missing: %s\n' "$path"
+              exit 1
+            fi
+          done
+          for file in share/xsessions/winux11.desktop share/wayland-sessions/winux11-wayland.desktop; do
+            path="$RUNNER_TEMP/winux11-root/$file"
+            if [ ! -f "$path" ]; then
+              printf '::error file=.github/workflows/ci.yml,line=1::Expected session entry missing: %s\n' "$path"
+              exit 1
+            fi
+          done
       - name: Smoke test WINUX11 session startup
         env:
           WINUX11_PREFIX: ${{ runner.temp }}/winux11-root
