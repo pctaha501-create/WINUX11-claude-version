@@ -18,16 +18,25 @@ jobs:
             sudo apt-get install --no-install-recommends -y $pkgs
           }
           test -f /usr/lib/x86_64-linux-gnu/qt6/plugins/wayland-graphics-integration-server/libqt-wayland-compositor-dmabuf-server-buffer.so
-      - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DWINUX11_BUILD_TESTS=ON
       - name: Validate QML syntax
         shell: bash
         run: |
+          status=0
           while IFS= read -r -d '' file; do
-            /usr/lib/qt6/bin/qmlformat "$file" >/dev/null
+            set +e
+            output=$(/usr/lib/qt6/bin/qmlformat "$file" 2>&1)
+            result=$?
+            set -e
+            if [ "$result" -ne 0 ]; then
+              status=1
+              details=$(printf '%s\n' "$output" | tail -n 8 | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')
+              [ -n "$details" ] || details="qmlformat failed with status $result"
+              printf '::error file=%s,line=1::%s\n' "$file" "$details"
+            fi
           done < <(find applications shell -name "*.qml" -print0)
+          exit "$status"
       - name: Build
-        run: cmake --build build --parallel
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DWINUX11_BUILD_TESTS=ON && cmake --build build --parallel
       - name: Test
         run: ctest --test-dir build --output-on-failure
       - name: Install validation
