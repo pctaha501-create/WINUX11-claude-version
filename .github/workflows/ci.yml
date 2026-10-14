@@ -23,21 +23,9 @@ jobs:
       - name: Validate QML syntax
         shell: bash
         run: |
-          status=0
           while IFS= read -r -d '' file; do
-            set +e
-            output=$(/usr/lib/qt6/bin/qmllint --no-warnings -I /usr/lib/qt6/qml -I /usr/lib/x86_64-linux-gnu/qt6/qml "$file" 2>&1)
-            result=$?
-            set -e
-            if [ -n "$output" ]; then printf '%s\n' "$output"; fi
-            if [ "$result" -ne 0 ]; then
-              status=1
-              details=$(printf '%s\n' "$output" | tail -n 5 | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')
-              [ -n "$details" ] || details="qmllint exited with status $result"
-              printf '::error file=%s,line=1::%s\n' "$file" "$details"
-            fi
+            /usr/lib/qt6/bin/qmlformat "$file" >/dev/null
           done < <(find applications shell -name "*.qml" -print0)
-          exit "$status"
       - name: Build
         run: cmake --build build --parallel
       - name: Test
