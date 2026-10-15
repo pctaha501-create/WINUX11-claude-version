@@ -8,11 +8,11 @@ jobs="${WINUX11_BUILD_JOBS:-2}"
 
 apt_packages="build-essential cmake ninja-build pkg-config libxkbcommon-dev qt6-base-dev qt6-declarative-dev qt6-webengine-dev qt6-wayland-dev qt6-wayland qml6-module-qtqml-workerscript qml6-module-qtquick-templates qml6-module-qtquick-window qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts qml6-module-qtwebengine"
 print_ubuntu_packages() {
-    printf 'On Ubuntu/Debian, install build and QML dependencies with:\\n  sudo apt install %s\\n' "$apt_packages" >&2
+    printf 'On Ubuntu/Debian, install build and QML dependencies with:\n  sudo apt install %s\n' "$apt_packages" >&2
 }
 
 if ! command -v cmake >/dev/null 2>&1 || ! command -v ninja >/dev/null 2>&1; then
-    printf '%s\\n' 'WINUX11: CMake and Ninja are required.' >&2
+    printf '%s\n' 'WINUX11: CMake and Ninja are required.' >&2
     print_ubuntu_packages
     exit 2
 fi
