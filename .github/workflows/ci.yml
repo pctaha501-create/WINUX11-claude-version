@@ -12,7 +12,7 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          pkgs="build-essential cmake ninja-build pkg-config libxkbcommon-dev qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools qt6-wayland-dev qt6-wayland xvfb xauth qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts qml6-module-qtwebengine"
+          pkgs="build-essential cmake ninja-build pkg-config libxkbcommon-dev qt6-base-dev qt6-declarative-dev qt6-wayland-dev xvfb xauth qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts qml6-module-qtwebengine"
           sudo apt-get install --no-install-recommends -y $pkgs || {
             sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=15 update
             sudo apt-get install --no-install-recommends -y $pkgs
@@ -30,10 +30,9 @@ jobs:
             if [ "$result" -ne 0 ]; then
               status=1
               details=$(printf '%s\n' "$output" | tail -n 8 | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')
-              [ -n "$details" ] || details="qmlformat failed with status $result"
-              printf '::error file=%s,line=1::%s\n' "$file" "$details"
+              printf '::error file=%s,line=1::qmlformat failed with status %s: %s\n' "$file" "$result" "${details:-qmlformat failed}"
             fi
-          done < <(find applications shell -name "*.qml" -print0)
+          done < <(find applications shell -name '*.qml' -print0)
           exit "$status"
       - name: Build
         shell: bash
@@ -59,13 +58,13 @@ jobs:
         shell: bash
         run: |
           set -eu
-          for script in session/winux11-session installer/install.sh; do
+          for script in session/winux11-session installer/install.sh installer/Winux11; do
             if ! sh -n "$script"; then
               printf '::error file=%s,line=1::Shell syntax validation failed\n' "$script"
               exit 1
             fi
           done
-          for executable in winux11-compositor winux11-shell winux11-calendar winux11-session; do
+          for executable in winux11-compositor winux11-shell winux11-calendar winux11-session Winux11; do
             path="$RUNNER_TEMP/winux11-root/bin/$executable"
             if [ ! -x "$path" ]; then
               printf '::error file=.github/workflows/ci.yml,line=1::Expected executable missing: %s\n' "$path"

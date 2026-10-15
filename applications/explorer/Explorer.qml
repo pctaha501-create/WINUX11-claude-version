@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 ApplicationWindow{
+ id:root
  palette.windowText:"white";palette.text:"white";palette.buttonText:"white";palette.brightText:"white";palette.highlightedText:"white";palette.placeholderText:"white"
  visible:true;width:1200;height:760;title:"WINUX11 Files";color:"#0a0d12"
  property string currentPath:homePath
