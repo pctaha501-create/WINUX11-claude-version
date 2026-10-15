@@ -102,16 +102,26 @@ ApplicationWindow {
             spacing: 5
             ToolButton {
                 width: 46; height: 46
-                text: "⊞"
-                font.pixelSize: 29
+                contentItem: Grid {
+                    columns: 2
+                    spacing: 2
+                    anchors.centerIn: parent
+                    Rectangle { width: 9; height: 9; radius: 1; color: "#60a5fa" }
+                    Rectangle { width: 9; height: 9; radius: 1; color: "#60a5fa" }
+                    Rectangle { width: 9; height: 9; radius: 1; color: "#60a5fa" }
+                    Rectangle { width: 9; height: 9; radius: 1; color: "#60a5fa" }
+                }
                 ToolTip.text: "Start"
                 onClicked: { start.visible = !start.visible; search.visible = false }
                 background: Rectangle { radius: 10; color: parent.down ? "#5560a5fa" : (parent.hovered ? "#334c87b8" : "transparent") }
             }
             ToolButton {
                 width: 46; height: 46
-                text: "⌕"
-                font.pixelSize: 28
+                contentItem: Item {
+                    anchors.fill: parent
+                    Rectangle { x: 12; y: 10; width: 17; height: 17; radius: 9; color: "transparent"; border.color: "white"; border.width: 2 }
+                    Rectangle { x: 27; y: 27; width: 8; height: 2; radius: 1; color: "white"; rotation: 45 }
+                }
                 ToolTip.text: "Search"
                 onClicked: { search.visible = !search.visible; start.visible = false }
                 background: Rectangle { radius: 10; color: parent.down ? "#5560a5fa" : (parent.hovered ? "#334c87b8" : "transparent") }
@@ -314,7 +324,7 @@ ApplicationWindow {
                 }
                 background: Rectangle { radius: 9; color: "#ff111722"; border.color: "#667d8da7" }
             }
-            Label { text: "Try: firefox  •  gimp  •  vlc  •  flatpak run org.mozilla.firefox"; color: "#e2e8f0"; font.pixelSize: 11 }
+            Label { text: "Try: firefox  •  gimp  •  vlc  •  flatpak run org.mozilla.firefox"; color: "white"; font.pixelSize: 11 }
         }
     }
 
@@ -380,7 +390,7 @@ ApplicationWindow {
                 Button { text: "Display"; Layout.fillWidth: true; onClicked: shellController.command("launch Display Manager") }
                 Button { text: "Bluetooth"; Layout.fillWidth: true; onClicked: shellController.command("launch Bluetooth Manager") }
             }
-            Label { text: "System tools open using the installed Linux desktop utilities."; color: "#e2e8f0"; wrapMode: Text.Wrap; width: parent.width }
+            Label { text: "System tools open using the installed Linux desktop utilities."; color: "white"; wrapMode: Text.Wrap; width: parent.width }
             Button { text: "Clipboard history"; onClicked: { clipboard.visible = !clipboard.visible; quick.visible = false } }
         }
     }
