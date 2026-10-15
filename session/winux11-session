@@ -39,6 +39,17 @@ shell="$prefix/bin/winux11-shell"
 [ -x "$compositor" ] || fail "compositor is not installed at $compositor"
 [ -x "$shell" ] || fail "shell is not installed at $shell"
 
+# The nested compositor uses a dedicated socket name. Recover an orphaned
+# socket left by a crash, but never unlink a socket that accepts connections.
+socket_path="$XDG_RUNTIME_DIR/$target_display"
+if [ -S "$socket_path" ]; then
+    if python3 -c 'import socket,sys; s=socket.socket(socket.AF_UNIX); s.settimeout(0.2); s.connect(sys.argv[1]); s.close()' "$socket_path" >/dev/null 2>&1; then
+        fail "another WINUX11 compositor is already listening on $socket_path"
+    fi
+    rm -f -- "$socket_path"
+    log "Removed stale WINUX11 Wayland socket"
+fi
+
 if [ -n "${WINUX11_COMPOSITOR_QPA_PLATFORM:-}" ]; then
     compositor_qpa="$WINUX11_COMPOSITOR_QPA_PLATFORM"
 elif [ -n "${DISPLAY:-}" ]; then
