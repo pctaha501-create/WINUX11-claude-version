@@ -72,8 +72,46 @@ bool WinuxCompositor::launchApplication(const QString &name){
 void WinuxCompositor::minimizeActive(){if(!m_active||!m_active->item())return;m_active->setMinimized(true);m_active->item()->setVisible(false);m_active=nullptr;emit windowListChanged();}
 void WinuxCompositor::restoreWindow(int i){if(i<0||i>=m_windows.size())return;auto *w=m_windows[i];w->setMinimized(false);w->item()->setVisible(w->workspace()==m_activeWorkspace);activate(w);emit windowListChanged();}
 void WinuxCompositor::closeActive(){if(m_active&&m_active->topLevel())m_active->topLevel()->sendClose();}
-void WinuxCompositor::maximizeActive(){if(!m_active||!m_active->item()||!m_active->topLevel())return;auto *item=m_active->item();if(m_active->topLevel()->maximized()){m_active->restoreGeometry();m_active->topLevel()->sendUnmaximized(QSize());}else{m_active->saveGeometry();item->setX(0);item->setY(0);item->setWidth(m_window.width());item->setHeight(m_window.height()-86);m_active->topLevel()->sendMaximized(QSize(item->width(),item->height()));}emit windowListChanged();}
-void WinuxCompositor::toggleFullscreenActive(){if(!m_active||!m_active->item()||!m_active->topLevel())return;if(m_active->topLevel()->fullscreen())m_active->topLevel()->sendUnmaximized(QSize());else m_active->topLevel()->sendFullscreen(QSize(m_window.width(),m_window.height()));}
+void WinuxCompositor::maximizeActive() {
+    if (!m_active || !m_active->item() || !m_active->topLevel())
+        return;
+    auto *item = m_active->item();
+    if (m_active->topLevel()->maximized()) {
+        m_active->restoreGeometry();
+        const QSize size(qMax(1, qRound(item->width())), qMax(1, qRound(item->height())));
+        m_active->topLevel()->sendUnmaximized(size);
+    } else {
+        m_active->saveGeometry();
+        const int width = qMax(1, m_window.width());
+        const int height = qMax(120, m_window.height() - 86);
+        item->setX(0);
+        item->setY(0);
+        item->setWidth(width);
+        item->setHeight(height);
+        m_active->topLevel()->sendMaximized(QSize(width, height));
+    }
+    emit windowListChanged();
+}
+void WinuxCompositor::toggleFullscreenActive() {
+    if (!m_active || !m_active->item() || !m_active->topLevel())
+        return;
+    auto *item = m_active->item();
+    if (m_active->topLevel()->fullscreen()) {
+        m_active->restoreGeometry();
+        const QSize size(qMax(1, qRound(item->width())), qMax(1, qRound(item->height())));
+        m_active->topLevel()->sendUnmaximized(size);
+    } else {
+        m_active->saveGeometry();
+        const int width = qMax(1, m_window.width());
+        const int height = qMax(1, m_window.height());
+        item->setX(0);
+        item->setY(0);
+        item->setWidth(width);
+        item->setHeight(height);
+        m_active->topLevel()->sendFullscreen(QSize(width, height));
+    }
+    emit windowListChanged();
+}
 void WinuxCompositor::snapActive(const QString &side){if(!m_active||!m_active->item()||!m_active->topLevel())return;auto *i=m_active->item();m_active->saveGeometry();const qreal w=m_window.width()/2.0;if(side=="left"){i->setX(0);i->setY(0);i->setWidth(w);i->setHeight(m_window.height()-86);}else if(side=="right"){i->setX(w);i->setY(0);i->setWidth(w);i->setHeight(m_window.height()-86);}else return;m_active->topLevel()->sendConfigure(QSize(i->width(),i->height()),QList<QWaylandXdgToplevel::State>{QWaylandXdgToplevel::ActivatedState});emit windowListChanged();}
 void WinuxCompositor::moveActive(int dx,int dy){if(!m_active||!m_active->item())return;auto *i=m_active->item();i->setX(qBound(0.0,i->x()+dx,double(m_window.width()-i->width())));i->setY(qBound(0.0,i->y()+dy,double(m_window.height()-i->height())));emit windowListChanged();}
 void WinuxCompositor::resizeActive(int dw,int dh){if(!m_active||!m_active->item())return;auto *i=m_active->item();i->setWidth(qMax(200.0,i->width()+dw));i->setHeight(qMax(120.0,i->height()+dh));m_active->topLevel()->sendResizing(QSize(i->width(),i->height()));emit windowListChanged();}

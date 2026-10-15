@@ -5,7 +5,7 @@ qml=$2
 controller_header=$3
 controller_source=$4
 
-if grep -Eq 'sendConfigure[[:space:]]*\([[:space:]]*QSize[[:space:]]*\([[:space:]]*\)' "$compositor"; then
+if grep -Eq '(sendConfigure|sendUnmaximized)[[:space:]]*\([[:space:]]*QSize[[:space:]]*\([[:space:]]*\)' "$compositor"; then
     echo "FAIL: invalid empty QSize is sent in an XDG configure" >&2
     exit 1
 fi
