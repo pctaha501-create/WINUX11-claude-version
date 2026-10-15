@@ -6,9 +6,10 @@ state="$(mktemp -d)"
 cleanup() { rm -rf "$runtime" "$state"; }
 trap cleanup EXIT INT TERM
 export XDG_RUNTIME_DIR="$runtime"
-export XDG_STATE_HOME="$state"
 chmod 700 "$runtime" "$state"
 export WINUX11_WAYLAND_DISPLAY="wayland-winux11-smoke"
+export WINUX11_LOG_FILE="$state/session.log"
+export WINUX11_HEADLESS_SMOKE=1
 unset WAYLAND_DISPLAY
 export WINUX11_PREFIX="${WINUX11_PREFIX:-$root/build-smoke/root}"
 command -v xvfb-run >/dev/null 2>&1 || { echo "WINUX11 smoke: xvfb-run is required"; exit 2; }
@@ -19,7 +20,12 @@ rc=$?
 set -e
 if [ "$rc" -ne 124 ] && [ "$rc" -ne 0 ]; then
     echo "WINUX11 smoke: session exited unexpectedly with $rc"
-    if [ -f "$state/winux11/session.log" ]; then tail -n 100 "$state/winux11/session.log"; fi
+    if [ -f "$WINUX11_LOG_FILE" ]; then tail -n 100 "$WINUX11_LOG_FILE"; fi
     exit "$rc"
 fi
-echo "WINUX11 smoke: compositor/socket/session startup path completed"
+if [ ! -S "$XDG_RUNTIME_DIR/$WINUX11_WAYLAND_DISPLAY" ]; then
+    echo "WINUX11 smoke: compositor never created the Wayland socket"
+    if [ -f "$WINUX11_LOG_FILE" ]; then tail -n 100 "$WINUX11_LOG_FILE"; fi
+    exit 4
+fi
+echo "WINUX11 smoke: compositor created its Wayland socket and stayed alive"

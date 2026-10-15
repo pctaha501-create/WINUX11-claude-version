@@ -9,12 +9,18 @@ export XDG_SESSION_DESKTOP=WINUX11
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 export PATH="$prefix/bin:$PATH"
 
-state_home="${XDG_STATE_HOME:-${HOME:-/tmp}/.local/state}"
-log_dir="$state_home/winux11"
-if mkdir -p "$log_dir" 2>/dev/null; then
-    log_file="$log_dir/session.log"
+if [ -n "${WINUX11_LOG_FILE:-}" ]; then
+    log_file="$WINUX11_LOG_FILE"
+    log_parent=$(dirname "$log_file")
+    mkdir -p "$log_parent" 2>/dev/null || true
 else
-    log_file="${TMPDIR:-/tmp}/winux11-session-$(id -u).log"
+    state_home="${XDG_STATE_HOME:-${HOME:-/tmp}/.local/state}"
+    log_dir="$state_home/winux11"
+    if mkdir -p "$log_dir" 2>/dev/null; then
+        log_file="$log_dir/session.log"
+    else
+        log_file="${TMPDIR:-/tmp}/winux11-session-$(id -u).log"
+    fi
 fi
 exec 3>&1 4>&2
 exec >>"$log_file" 2>&1
@@ -29,8 +35,6 @@ shell="$prefix/bin/winux11-shell"
 [ -x "$compositor" ] || fail "compositor is not installed at $compositor"
 [ -x "$shell" ] || fail "shell is not installed at $shell"
 
-# Render the compositor through the host display, but expose a separate
-# Wayland socket for applications running inside WINUX11.
 if [ -n "${WINUX11_COMPOSITOR_QPA_PLATFORM:-}" ]; then
     compositor_qpa="$WINUX11_COMPOSITOR_QPA_PLATFORM"
 elif [ -n "${DISPLAY:-}" ]; then
