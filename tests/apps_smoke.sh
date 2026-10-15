@@ -17,7 +17,7 @@ for app in $apps; do
     limit=3
     [ "$app" = browser ] && limit=5
     set +e
-    timeout "${limit}s" env QT_QPA_PLATFORM=xcb QT_QUICK_BACKEND=software QTWEBENGINE_DISABLE_SANDBOX=1 "$executable" >"$log" 2>&1
+    timeout -k 1s "${limit}s" env QT_QPA_PLATFORM=xcb QT_QUICK_BACKEND=software QTWEBENGINE_DISABLE_SANDBOX=1 "$executable" >"$log" 2>&1
     rc=$?
     set -e
 
