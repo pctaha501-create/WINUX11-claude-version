@@ -32,7 +32,25 @@ void WinuxCompositor::create(){
  m_output=new QWaylandOutput(this,&m_window);m_output->setSizeFollowsWindow(true);const QSize outputSize=m_window.size().isValid()?m_window.size():QSize(1280,720);const QWaylandOutputMode mode(outputSize,60000);
  m_output->addMode(mode,true);m_output->setCurrentMode(mode);m_output->setPhysicalSize(QSize(340,190));m_output->setScaleFactor(1);m_output->setManufacturer("WINUX11");m_output->setModel("WINUX11 Virtual Display");
 }
-QWaylandQuickShellSurfaceItem *WinuxCompositor::windowAt(const QPointF &pos)const{for(int n=m_windows.size()-1;n>=0;--n){auto *w=m_windows[n];if(!w||w->minimized()||w->workspace()!=m_activeWorkspace||!w->item()||!w->item()->isVisible())continue;auto *item=w->item();if(item->contains(item->mapFromScene(pos)))return item;}return nullptr;}
+QWaylandQuickShellSurfaceItem *WinuxCompositor::windowAt(const QPointF &pos) const
+{
+    QWaylandQuickShellSurfaceItem *topmost = nullptr;
+    qreal topmostZ = -1.0e9;
+    // Window activation changes QQuickItem::z, not m_windows insertion order.
+    // Hit-test by the actual stacking order so overlapping windows never
+    // steal clicks from the visible window underneath/above them incorrectly.
+    for (auto *w : m_windows) {
+        if (!w || w->minimized() || w->workspace() != m_activeWorkspace ||
+            !w->item() || !w->item()->isVisible())
+            continue;
+        auto *item = w->item();
+        if (item->z() < topmostZ || !item->contains(item->mapFromScene(pos)))
+            continue;
+        topmost = item;
+        topmostZ = item->z();
+    }
+    return topmost;
+}
 WindowSurface *WinuxCompositor::surfaceAt(const QPointF &pos)const{auto *item=windowAt(pos);if(!item)return nullptr;for(auto *w:m_windows)if(w&&w->item()==item)return w;return nullptr;}
 void WinuxCompositor::finishPointerGrab(){m_pointerGrabWindow=nullptr;m_pointerMoveGrab=false;m_pointerResizeGrab=false;m_pointerGrabButton=Qt::NoButton;}
 bool WinuxCompositor::handlePointerEvent(QEvent *event){
