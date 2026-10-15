@@ -16,6 +16,7 @@ ApplicationWindow {
     color: "#090b10"
     flags: Qt.FramelessWindowHint
     property date clockNow: new Date()
+    property bool showAllApps: false
     Timer { interval: 15000; running: true; repeat: true; onTriggered: root.clockNow = new Date() }
 
     Rectangle {
@@ -211,10 +212,12 @@ ApplicationWindow {
             }
             RowLayout {
                 Layout.fillWidth: true
-                Label { text: "Pinned"; color: "white"; font.bold: true; font.pixelSize: 17; Layout.fillWidth: true }
-                Button { text: "All apps  ›"; onClicked: allApps.visible = !allApps.visible }
+                Label { text: root.showAllApps ? "All apps" : "Pinned"; color: "white"; font.bold: true; font.pixelSize: 17; Layout.fillWidth: true }
+                Button { text: root.showAllApps ? "Pinned  ‹" : "All apps  ›"; onClicked: root.showAllApps = !root.showAllApps }
             }
             GridLayout {
+                id: pinnedApps
+                visible: !root.showAllApps
                 Layout.fillWidth: true
                 columns: 5
                 columnSpacing: 8
@@ -227,33 +230,52 @@ ApplicationWindow {
                 Button { text: "Security"; onClicked: shellController.command("launch Security Center") }
                 Button { text: "Software"; onClicked: shellController.command("launch Software Center") }
                 Button { text: "Network"; onClicked: shellController.command("launch Network") }
-                Button { text: "Downloader"; onClicked: shellController.command("launch Downloader") }
-                Button { text: "Archive"; onClicked: shellController.command("launch Archive Manager") }
-                Button { text: "Screenshot"; onClicked: shellController.command("launch Screenshot") }
                 Button { text: "Calculator"; onClicked: shellController.command("launch Calculator") }
-                Button { text: "Clock"; onClicked: shellController.command("launch Clock") }
-                Button { text: "Calendar"; onClicked: shellController.command("launch Calendar") }
                 Button { text: "Text Editor"; onClicked: shellController.command("launch Text Editor") }
-                Button { text: "Photos"; onClicked: shellController.command("launch Photos") }
-                Button { text: "Media Player"; onClicked: shellController.command("launch Media Player") }
-                Button { text: "Music"; onClicked: shellController.command("launch Music") }
-                Button { text: "Camera"; onClicked: shellController.command("launch Camera") }
-                Button { text: "Voice Recorder"; onClicked: shellController.command("launch Voice Recorder") }
             }
-            Rectangle {
+            Flickable {
                 id: allApps
-                visible: false
+                visible: root.showAllApps
                 Layout.fillWidth: true
-                Layout.preferredHeight: 92
-                radius: 10
-                color: "#ff111722"
-                border.color: "#334e5b70"
-                Column {
-                    anchors.fill: parent
-                    anchors.margins: 10
-                    spacing: 7
-                    Label { text: "Linux commands"; color: "white"; font.bold: true }
-                    Label { text: "Enter an installed command above, for example: firefox, gimp, vlc, flatpak run org.mozilla.firefox"; color: "#e2e8f0"; wrapMode: Text.Wrap; width: parent.width }
+                Layout.fillHeight: true
+                clip: true
+                contentWidth: width
+                contentHeight: appGrid.implicitHeight
+                GridLayout {
+                    id: appGrid
+                    width: allApps.width
+                    columns: 5
+                    columnSpacing: 8
+                    rowSpacing: 8
+                    Button { text: "Files"; onClicked: shellController.command("launch Files") }
+                    Button { text: "Terminal"; onClicked: shellController.command("launch Terminal") }
+                    Button { text: "Browser"; onClicked: shellController.command("launch Browser") }
+                    Button { text: "Settings"; onClicked: shellController.command("launch Settings") }
+                    Button { text: "Task Manager"; onClicked: shellController.command("launch Task Manager") }
+                    Button { text: "Security Center"; onClicked: shellController.command("launch Security Center") }
+                    Button { text: "Software Center"; onClicked: shellController.command("launch Software Center") }
+                    Button { text: "Network"; onClicked: shellController.command("launch Network") }
+                    Button { text: "Downloader"; onClicked: shellController.command("launch Downloader") }
+                    Button { text: "Archive Manager"; onClicked: shellController.command("launch Archive Manager") }
+                    Button { text: "Screenshot"; onClicked: shellController.command("launch Screenshot") }
+                    Button { text: "Calculator"; onClicked: shellController.command("launch Calculator") }
+                    Button { text: "Clock"; onClicked: shellController.command("launch Clock") }
+                    Button { text: "Calendar"; onClicked: shellController.command("launch Calendar") }
+                    Button { text: "Text Editor"; onClicked: shellController.command("launch Text Editor") }
+                    Button { text: "Photos"; onClicked: shellController.command("launch Photos") }
+                    Button { text: "Media Player"; onClicked: shellController.command("launch Media Player") }
+                    Button { text: "Music"; onClicked: shellController.command("launch Music") }
+                    Button { text: "Camera"; onClicked: shellController.command("launch Camera") }
+                    Button { text: "Voice Recorder"; onClicked: shellController.command("launch Voice Recorder") }
+                    Button { text: "Disk Management"; onClicked: shellController.command("launch Disk Management") }
+                    Button { text: "Update Manager"; onClicked: shellController.command("launch Update Manager") }
+                    Button { text: "Startup Apps"; onClicked: shellController.command("launch Startup Apps") }
+                    Button { text: "Printer Manager"; onClicked: shellController.command("launch Printer Manager") }
+                    Button { text: "Display Manager"; onClicked: shellController.command("launch Display Manager") }
+                    Button { text: "Sound Manager"; onClicked: shellController.command("launch Sound Manager") }
+                    Button { text: "Privacy Center"; onClicked: shellController.command("launch Privacy Center") }
+                    Button { text: "Bluetooth Manager"; onClicked: shellController.command("launch Bluetooth Manager") }
+                    Button { text: "Wi-Fi Manager"; onClicked: shellController.command("launch Wi-Fi Manager") }
                 }
             }
             Item { Layout.fillHeight: true }
