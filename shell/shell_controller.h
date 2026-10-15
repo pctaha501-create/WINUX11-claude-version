@@ -3,6 +3,8 @@
 #include <QClipboard>
 #include <QVariantList>
 #include <QLocalSocket>
+#include <QQueue>
+class QTimer;
 class ShellController final:public QObject{
  Q_OBJECT
  Q_PROPERTY(QVariantList windows READ windows NOTIFY stateChanged)
@@ -19,5 +21,11 @@ public:
  QString clipboardText() const;
 signals:void stateChanged();void connectionFailed(const QString &message);void clipboardChanged();
 private:
- void readState();QLocalSocket m_socket;QVariantList m_windows;int m_workspace=0;QByteArray m_buffer;
+ void readState();
+ QLocalSocket m_socket;
+ QTimer *m_reconnectTimer=nullptr;
+ QQueue<QString> m_pendingCommands;
+ QVariantList m_windows;
+ int m_workspace=0;
+ QByteArray m_buffer;
 };
