@@ -32,12 +32,30 @@ void WinuxCompositor::create(){
  m_output=new QWaylandOutput(this,&m_window);m_output->setSizeFollowsWindow(true);const QSize outputSize=m_window.size().isValid()?m_window.size():QSize(1280,720);const QWaylandOutputMode mode(outputSize,60000);
  m_output->addMode(mode,true);m_output->setCurrentMode(mode);m_output->setPhysicalSize(QSize(340,190));m_output->setScaleFactor(1);m_output->setManufacturer("WINUX11");m_output->setModel("WINUX11 Virtual Display");
 }
-QWaylandQuickShellSurfaceItem *WinuxCompositor::windowAt(const QPointF &pos)const{for(int n=m_windows.size()-1;n>=0;--n){auto *w=m_windows[n];if(!w||w->minimized()||w->workspace()!=m_activeWorkspace||!w->item()||!w->item()->isVisible())continue;auto *item=w->item();if(item->contains(item->mapFromScene(pos)))return item;}return nullptr;}
+QWaylandQuickShellSurfaceItem *WinuxCompositor::windowAt(const QPointF &pos) const
+{
+    QWaylandQuickShellSurfaceItem *topmost = nullptr;
+    qreal topmostZ = -1.0e9;
+    // Window activation changes QQuickItem::z, not m_windows insertion order.
+    // Hit-test by the actual stacking order so overlapping windows never
+    // steal clicks from the visible window underneath/above them incorrectly.
+    for (auto *w : m_windows) {
+        if (!w || w->minimized() || w->workspace() != m_activeWorkspace ||
+            !w->item() || !w->item()->isVisible())
+            continue;
+        auto *item = w->item();
+        if (item->z() < topmostZ || !item->contains(item->mapFromScene(pos)))
+            continue;
+        topmost = item;
+        topmostZ = item->z();
+    }
+    return topmost;
+}
 WindowSurface *WinuxCompositor::surfaceAt(const QPointF &pos)const{auto *item=windowAt(pos);if(!item)return nullptr;for(auto *w:m_windows)if(w&&w->item()==item)return w;return nullptr;}
 void WinuxCompositor::finishPointerGrab(){m_pointerGrabWindow=nullptr;m_pointerMoveGrab=false;m_pointerResizeGrab=false;m_pointerGrabButton=Qt::NoButton;}
 bool WinuxCompositor::handlePointerEvent(QEvent *event){
  if(!m_seat)return false;
- if(event->type()==QEvent::MouseMove){auto *e=static_cast<QMouseEvent*>(event);const QPointF pos=e->position();if(m_pointerGrabWindow&&m_pointerGrabWindow->item()){auto *item=m_pointerGrabWindow->item();const QPointF delta=pos-m_pointerGrabStart;auto g=m_pointerGrabGeometry;if(m_pointerMoveGrab){item->setX(qBound(0.0,g.x()+delta.x(),double(m_window.width()-item->width())));item->setY(qBound(0.0,g.y()+delta.y(),double(m_window.height()-item->height())));}else if(m_pointerResizeGrab){item->setWidth(qMax(200.0,g.width()+delta.x()));item->setHeight(qMax(120.0,g.height()+delta.y()));m_pointerGrabWindow->topLevel()->sendResizing(QSize(item->width(),item->height()));}emit windowListChanged();return true;}auto *surface=surfaceAt(pos);if(surface){activate(surface);if(surface->item()&&surface->item()->view())m_seat->sendMouseMoveEvent(surface->item()->view(),surface->item()->mapFromScene(pos),pos);}return false;}
+ if(event->type()==QEvent::MouseMove){auto *e=static_cast<QMouseEvent*>(event);const QPointF pos=e->position();if(m_pointerGrabWindow&&m_pointerGrabWindow->item()){auto *item=m_pointerGrabWindow->item();const QPointF delta=pos-m_pointerGrabStart;auto g=m_pointerGrabGeometry;if(m_pointerMoveGrab){const qreal maxX=qMax(0.0,qreal(m_window.width())-item->width());const qreal maxY=qMax(0.0,qreal(m_window.height())-item->height());item->setX(qBound(0.0,g.x()+delta.x(),maxX));item->setY(qBound(0.0,g.y()+delta.y(),maxY));}else if(m_pointerResizeGrab){const qreal maxWidth=qMax(200.0,qreal(m_window.width())-item->x());const qreal maxHeight=qMax(120.0,qreal(m_window.height())-item->y());item->setWidth(qBound(200.0,g.width()+delta.x(),maxWidth));item->setHeight(qBound(120.0,g.height()+delta.y(),maxHeight));m_pointerGrabWindow->topLevel()->sendResizing(QSize(item->width(),item->height()));}emit windowListChanged();return true;}auto *surface=surfaceAt(pos);if(surface){activate(surface);if(surface->item()&&surface->item()->view())m_seat->sendMouseMoveEvent(surface->item()->view(),surface->item()->mapFromScene(pos),pos);}return false;}
  if(event->type()==QEvent::MouseButtonPress){auto *e=static_cast<QMouseEvent*>(event);auto *surface=surfaceAt(e->position());if(surface)activate(surface);if(surface&&e->modifiers().testFlag(Qt::MetaModifier)&&(e->button()==Qt::LeftButton||e->button()==Qt::RightButton)){m_pointerGrabWindow=surface;m_pointerGrabStart=e->position();m_pointerGrabGeometry=QRectF(surface->item()->x(),surface->item()->y(),surface->item()->width(),surface->item()->height());m_pointerGrabButton=e->button();m_pointerMoveGrab=e->button()==Qt::LeftButton;m_pointerResizeGrab=e->button()==Qt::RightButton;return true;}if(surface&&surface->item()&&surface->item()->view()){m_seat->sendMousePressEvent(e->button());return true;}return false;}
  if(event->type()==QEvent::MouseButtonRelease){auto *e=static_cast<QMouseEvent*>(event);if(m_pointerGrabWindow){if(m_pointerGrabWindow->topLevel())m_pointerGrabWindow->topLevel()->sendConfigure(QSize(m_pointerGrabWindow->item()->width(),m_pointerGrabWindow->item()->height()),QList<QWaylandXdgToplevel::State>{QWaylandXdgToplevel::ActivatedState});finishPointerGrab();return true;}if(m_seat->mouseFocus()){m_seat->sendMouseReleaseEvent(e->button());return true;}return false;}
  if(event->type()==QEvent::Wheel){auto *e=static_cast<QWheelEvent*>(event);auto *surface=surfaceAt(e->position());if(surface){activate(surface);m_seat->sendMouseWheelEvent(e->angleDelta().y()!=0?Qt::Vertical:Qt::Horizontal,e->angleDelta().y()!=0?e->angleDelta().y():e->angleDelta().x());return true;}return false;}
@@ -75,9 +93,80 @@ void WinuxCompositor::closeActive(){if(m_active&&m_active->topLevel())m_active->
 void WinuxCompositor::maximizeActive(){if(!m_active||!m_active->item()||!m_active->topLevel())return;auto *item=m_active->item();if(m_active->topLevel()->maximized()){m_active->restoreGeometry();m_active->topLevel()->sendUnmaximized(QSize());}else{m_active->saveGeometry();item->setX(0);item->setY(0);item->setWidth(m_window.width());item->setHeight(m_window.height()-86);m_active->topLevel()->sendMaximized(QSize(item->width(),item->height()));}emit windowListChanged();}
 void WinuxCompositor::toggleFullscreenActive(){if(!m_active||!m_active->item()||!m_active->topLevel())return;if(m_active->topLevel()->fullscreen())m_active->topLevel()->sendUnmaximized(QSize());else m_active->topLevel()->sendFullscreen(QSize(m_window.width(),m_window.height()));}
 void WinuxCompositor::snapActive(const QString &side){if(!m_active||!m_active->item()||!m_active->topLevel())return;auto *i=m_active->item();m_active->saveGeometry();const qreal w=m_window.width()/2.0;if(side=="left"){i->setX(0);i->setY(0);i->setWidth(w);i->setHeight(m_window.height()-86);}else if(side=="right"){i->setX(w);i->setY(0);i->setWidth(w);i->setHeight(m_window.height()-86);}else return;m_active->topLevel()->sendConfigure(QSize(i->width(),i->height()),QList<QWaylandXdgToplevel::State>{QWaylandXdgToplevel::ActivatedState});emit windowListChanged();}
-void WinuxCompositor::moveActive(int dx,int dy){if(!m_active||!m_active->item())return;auto *i=m_active->item();i->setX(qBound(0.0,i->x()+dx,double(m_window.width()-i->width())));i->setY(qBound(0.0,i->y()+dy,double(m_window.height()-i->height())));emit windowListChanged();}
-void WinuxCompositor::resizeActive(int dw,int dh){if(!m_active||!m_active->item())return;auto *i=m_active->item();i->setWidth(qMax(200.0,i->width()+dw));i->setHeight(qMax(120.0,i->height()+dh));m_active->topLevel()->sendResizing(QSize(i->width(),i->height()));emit windowListChanged();}
-void WinuxCompositor::onNewToplevel(QWaylandXdgToplevel *t,QWaylandXdgSurface *s){Q_UNUSED(s);auto *w=new WindowSurface(t,this);m_windows.push_back(w);if(!m_window.isVisible())return;auto *item=new QWaylandQuickShellSurfaceItem(m_window.contentItem());item->setShellSurface(t->xdgSurface());item->setFocusOnClick(true);item->setAutoCreatePopupItems(true);item->setInputEventsEnabled(true);w->setItem(item);item->setZ(m_nextZ++);item->setX((m_window.width()-800)/2);item->setY((m_window.height()-600)/2);item->setWidth(800);item->setHeight(600);connect(t,&QObject::destroyed,this,&WinuxCompositor::onToplevelDestroyed);connect(t,&QWaylandXdgToplevel::activatedChanged,this,[this,w]{if(w->topLevel()&&w->topLevel()->activated())activate(w);});emit windowAdded(w);emit windowListChanged();activate(w);}
+void WinuxCompositor::moveActive(int dx, int dy)
+{
+    if (!m_active || !m_active->item())
+        return;
+    auto *item = m_active->item();
+    const qreal maxX = qMax(0.0, qreal(m_window.width()) - item->width());
+    const qreal maxY = qMax(0.0, qreal(m_window.height()) - item->height());
+    item->setX(qBound(0.0, item->x() + dx, maxX));
+    item->setY(qBound(0.0, item->y() + dy, maxY));
+    emit windowListChanged();
+}
+void WinuxCompositor::resizeActive(int dw, int dh)
+{
+    if (!m_active || !m_active->item() || !m_active->topLevel())
+        return;
+    auto *item = m_active->item();
+    const qreal maxWidth = qMax(200.0, qreal(m_window.width()) - item->x());
+    const qreal maxHeight = qMax(120.0, qreal(m_window.height()) - item->y());
+    item->setWidth(qBound(200.0, item->width() + dw, maxWidth));
+    item->setHeight(qBound(120.0, item->height() + dh, maxHeight));
+    m_active->topLevel()->sendResizing(QSize(item->width(), item->height()));
+    emit windowListChanged();
+}
+void WinuxCompositor::onNewToplevel(QWaylandXdgToplevel *t, QWaylandXdgSurface *s)
+{
+    Q_UNUSED(s);
+    auto *w = new WindowSurface(t, this);
+    m_windows.push_back(w);
+    if (!m_window.isVisible())
+        return;
+
+    auto *item = new QWaylandQuickShellSurfaceItem(m_window.contentItem());
+    item->setShellSurface(t->xdgSurface());
+    item->setFocusOnClick(true);
+    item->setAutoCreatePopupItems(true);
+    item->setInputEventsEnabled(true);
+    w->setItem(item);
+    item->setZ(m_nextZ++);
+
+    // Respect the client's xdg-toplevel state. The desktop shell asks for
+    // fullscreen; forcing every client to 800x600 made the whole desktop tiny
+    // and could leave the client with an invalid initial configure size.
+    const auto applyWindowState = [this, w, t]() {
+        if (!w->item() || !m_window.isVisible())
+            return;
+        auto *surfaceItem = w->item();
+        if (t->fullscreen() || t->maximized()) {
+            surfaceItem->setX(0);
+            surfaceItem->setY(0);
+            surfaceItem->setWidth(m_window.width());
+            surfaceItem->setHeight(m_window.height());
+        } else {
+            const qreal width = qMin(800.0, qMax(320.0, qreal(m_window.width()) - 40.0));
+            const qreal height = qMin(600.0, qMax(240.0, qreal(m_window.height()) - 80.0));
+            surfaceItem->setWidth(width);
+            surfaceItem->setHeight(height);
+            surfaceItem->setX((m_window.width() - width) / 2.0);
+            surfaceItem->setY((m_window.height() - height) / 2.0);
+        }
+    };
+    applyWindowState();
+    connect(t, &QWaylandXdgToplevel::fullscreenChanged, this,
+            [applyWindowState]() { applyWindowState(); });
+    connect(t, &QWaylandXdgToplevel::maximizedChanged, this,
+            [applyWindowState]() { applyWindowState(); });
+    connect(t, &QObject::destroyed, this, &WinuxCompositor::onToplevelDestroyed);
+    connect(t, &QWaylandXdgToplevel::activatedChanged, this, [this, w] {
+        if (w->topLevel() && w->topLevel()->activated())
+            activate(w);
+    });
+    emit windowAdded(w);
+    emit windowListChanged();
+    activate(w);
+}
 void WinuxCompositor::onToplevelDestroyed(){for(int i=m_windows.size()-1;i>=0;--i){if(!m_windows[i]->topLevel()){auto *r=m_windows.takeAt(i);if(m_active==r)m_active=nullptr;emit windowRemoved(r);r->deleteLater();}}emit windowListChanged();}
 void WinuxCompositor::activate(WindowSurface *w){if(!w||!w->topLevel()||w->workspace()!=m_activeWorkspace||w->minimized())return;if(m_active==w){if(w->item())w->item()->setZ(m_nextZ++);return;}if(m_active&&m_active->topLevel())m_active->topLevel()->sendConfigure(QSize(),QList<QWaylandXdgToplevel::State>{});m_active=w;if(w->item())w->item()->setZ(m_nextZ++);if(m_seat&&w->topLevel()->xdgSurface()&&w->topLevel()->xdgSurface()->surface())m_seat->setKeyboardFocus(w->topLevel()->xdgSurface()->surface());w->topLevel()->sendConfigure(QSize(),QList<QWaylandXdgToplevel::State>{QWaylandXdgToplevel::ActivatedState});emit activeWindowChanged(w);emit windowListChanged();}
 void WinuxCompositor::activateIndex(int index){if(index<0||index>=m_windows.size())return;activate(m_windows[index]);}

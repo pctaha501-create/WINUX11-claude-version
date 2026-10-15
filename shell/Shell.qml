@@ -10,6 +10,12 @@ ApplicationWindow {
     palette.brightText: "white"
     palette.highlightedText: "white"
     palette.placeholderText: "white"
+    // A valid initial configure size is required before a nested Wayland
+    // compositor can reliably place this top-level surface.
+    width: 1280
+    height: 720
+    minimumWidth: 800
+    minimumHeight: 600
     visible: true
     visibility: Window.FullScreen
     title: "WINUX11 Shell"
@@ -17,6 +23,9 @@ ApplicationWindow {
     flags: Qt.FramelessWindowHint
     property date clockNow: new Date()
     property bool showAllApps: false
+    // Emergency exit: close only the WINUX11 shell process; the session script
+    // then tears down its child compositor and returns to the host desktop.
+    Shortcut { sequence: "Ctrl+Alt+Backspace"; context: Qt.ApplicationShortcut; onActivated: Qt.quit() }
     Timer { interval: 15000; running: true; repeat: true; onTriggered: root.clockNow = new Date() }
 
     Rectangle {

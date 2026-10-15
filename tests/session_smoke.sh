@@ -18,6 +18,14 @@ export WINUX11_LOG_FILE="$state/session.log"
 unset WINUX11_HEADLESS_SMOKE
 unset WAYLAND_DISPLAY
 export WINUX11_PREFIX="${WINUX11_PREFIX:-$root/build-smoke/root}"
+# Regression test: leave an orphaned Unix socket at the dedicated nested
+# Wayland path. The session launcher must remove it and start normally.
+python3 - "$XDG_RUNTIME_DIR/$WINUX11_WAYLAND_DISPLAY" <<'PY'
+import socket, sys
+sock = socket.socket(socket.AF_UNIX)
+sock.bind(sys.argv[1])
+sock.close()  # Deliberately leave the stale socket path behind.
+PY
 command -v xvfb-run >/dev/null 2>&1 || { echo "WINUX11 smoke: xvfb-run is required"; exit 2; }
 command -v timeout >/dev/null 2>&1 || { echo "WINUX11 smoke: timeout is required"; exit 2; }
 [ -x "$WINUX11_PREFIX/bin/winux11-compositor" ] && [ -x "$WINUX11_PREFIX/bin/winux11-shell" ] || { echo "WINUX11 smoke: installed binaries missing"; exit 3; }
