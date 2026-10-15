@@ -78,6 +78,10 @@ jobs:
               exit 1
             fi
           done
+      - name: Smoke test installed applications
+        env:
+          WINUX11_PREFIX: ${{ runner.temp }}/winux11-root
+        run: xvfb-run -a sh tests/apps_smoke.sh
       - name: Smoke test WINUX11 session startup
         env:
           WINUX11_PREFIX: ${{ runner.temp }}/winux11-root
