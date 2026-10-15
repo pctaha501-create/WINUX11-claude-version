@@ -10,6 +10,11 @@ ApplicationWindow {
     palette.brightText: "white"
     palette.highlightedText: "white"
     palette.placeholderText: "white"
+    palette.button: "#a8212d40"
+    palette.base: "#b8101724"
+    palette.window: "#141c2b"
+    palette.highlight: "#6678aaff"
+    palette.mid: "#667b8da7"
     visible: true
     visibility: Window.FullScreen
     title: "WINUX11 Shell"
@@ -31,12 +36,19 @@ ApplicationWindow {
         width: Math.min(root.width * 0.62, 900)
         height: width
         radius: width / 2
-        x: root.width * 0.42
         y: root.height * 0.18
-        opacity: 0.18
+        id: ambientGlow
+        property real drift: 0
+        opacity: 0.22
+        x: root.width * 0.42 + drift
         gradient: Gradient {
             GradientStop { position: 0; color: "#2563eb" }
             GradientStop { position: 1; color: "#111827" }
+        }
+        SequentialAnimation on drift {
+            loops: Animation.Infinite
+            NumberAnimation { to: 20; duration: 22000; easing.type: Easing.InOutSine }
+            NumberAnimation { to: -20; duration: 22000; easing.type: Easing.InOutSine }
         }
     }
     Rectangle {
@@ -45,8 +57,35 @@ ApplicationWindow {
         radius: width / 2
         x: root.width * 0.58
         y: root.height * 0.40
-        opacity: 0.12
         color: "#38bdf8"
+        property real pulse: 0
+        SequentialAnimation on pulse {
+            loops: Animation.Infinite
+            NumberAnimation { to: 0.045; duration: 9000; easing.type: Easing.InOutSine }
+            NumberAnimation { to: 0; duration: 9000; easing.type: Easing.InOutSine }
+        }
+        opacity: 0.10 + pulse
+    }
+
+    Column {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: -36
+        spacing: 8
+        opacity: 0.84
+        Label {
+            text: "Welcome to WINUX11"
+            color: "#f4f8ff"
+            font.pixelSize: Math.max(26, Math.min(38, root.width / 36))
+            font.weight: Font.DemiBold
+            anchors.horizontalCenter: parent.horizontalCenter
+        }
+        Label {
+            text: "A calmer space to create."
+            color: "#b9c8df"
+            font.pixelSize: 16
+            anchors.horizontalCenter: parent.horizontalCenter
+        }
     }
 
     Column {
@@ -68,14 +107,25 @@ ApplicationWindow {
                 height: 78
                 onClicked: shellController.command("launch " + modelData.command)
                 background: Rectangle {
-                    color: parent.down ? "#554f78a0" : (parent.hovered ? "#443b82b8" : "transparent")
-                    radius: 9
-                    border.color: parent.hovered ? "#6687a7c7" : "transparent"
+                    color: parent.down ? "#7760a5fa" : (parent.hovered ? "#554c87b8" : "#221d2a3c")
+                    radius: 12
+                    border.color: parent.hovered ? "#99b7d8f5" : "#33ffffff"
+                    Behavior on color { ColorAnimation { duration: 140 } }
+                    Behavior on border.color { ColorAnimation { duration: 140 } }
                 }
                 contentItem: Column {
                     anchors.fill: parent
                     spacing: 5
-                    Label { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.glyph; color: "white"; font.pixelSize: 29 }
+                    Rectangle {
+                        width: 42; height: 42; radius: 13
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        gradient: Gradient {
+                            GradientStop { position: 0; color: modelData.command === "Files" ? "#77b7ff" : modelData.command === "Terminal" ? "#42c9a5" : modelData.command === "Browser" ? "#9a8bff" : modelData.command === "Settings" ? "#8da4bd" : "#4b8de8" }
+                            GradientStop { position: 1; color: "#24364e" }
+                        }
+                        border.color: "#66ffffff"
+                        Label { anchors.centerIn: parent; text: modelData.glyph; color: "white"; font.pixelSize: 24 }
+                    }
                     Label { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.label; color: "white"; font.pixelSize: 11; wrapMode: Text.Wrap; horizontalAlignment: Text.AlignHCenter }
                 }
             }
@@ -88,8 +138,8 @@ ApplicationWindow {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        color: "#e61b202a"
-        border.color: "#553f485a"
+        color: "#b51b202a"
+        border.color: "#66cbd5e1"
         Rectangle {
             anchors.top: parent.top
             anchors.left: parent.left
@@ -113,7 +163,7 @@ ApplicationWindow {
                 }
                 ToolTip.text: "Start"
                 onClicked: { start.visible = !start.visible; search.visible = false }
-                background: Rectangle { radius: 10; color: parent.down ? "#5560a5fa" : (parent.hovered ? "#334c87b8" : "transparent") }
+                background: Rectangle { radius: 10; color: parent.down ? "#7760a5fa" : (parent.hovered ? "#554c87b8" : "#221d2a3c"); border.color: parent.hovered ? "#88b7d8f5" : "#22ffffff"; Behavior on color { ColorAnimation { duration: 140 } } }
             }
             ToolButton {
                 width: 46; height: 46
@@ -124,7 +174,7 @@ ApplicationWindow {
                 }
                 ToolTip.text: "Search"
                 onClicked: { search.visible = !search.visible; start.visible = false }
-                background: Rectangle { radius: 10; color: parent.down ? "#5560a5fa" : (parent.hovered ? "#334c87b8" : "transparent") }
+                background: Rectangle { radius: 10; color: parent.down ? "#7760a5fa" : (parent.hovered ? "#554c87b8" : "#221d2a3c"); border.color: parent.hovered ? "#88b7d8f5" : "#22ffffff"; Behavior on color { ColorAnimation { duration: 140 } } }
             }
             Rectangle { width: 1; height: 30; anchors.verticalCenter: parent.verticalCenter; color: "#52607080" }
             Repeater {
@@ -169,20 +219,20 @@ ApplicationWindow {
                 text: "⌃"
                 ToolTip.text: "System tray"
                 onClicked: quick.visible = !quick.visible
-                background: Rectangle { radius: 9; color: parent.hovered ? "#334c87b8" : "transparent" }
+                background: Rectangle { radius: 9; color: parent.hovered ? "#554c87b8" : "#221d2a3c"; border.color: "#33ffffff"; Behavior on color { ColorAnimation { duration: 140 } } }
             }
             ToolButton {
                 width: 48; height: 42
                 text: "◖"
                 ToolTip.text: "Quick settings"
                 onClicked: quick.visible = !quick.visible
-                background: Rectangle { radius: 9; color: parent.hovered ? "#334c87b8" : "transparent" }
+                background: Rectangle { radius: 9; color: parent.hovered ? "#554c87b8" : "#221d2a3c"; border.color: "#33ffffff"; Behavior on color { ColorAnimation { duration: 140 } } }
             }
             ToolButton {
                 height: 46
                 width: 104
                 onClicked: { quick.visible = !quick.visible; start.visible = false }
-                background: Rectangle { radius: 9; color: parent.hovered ? "#334c87b8" : "transparent" }
+                background: Rectangle { radius: 9; color: parent.hovered ? "#554c87b8" : "#221d2a3c"; border.color: "#33ffffff"; Behavior on color { ColorAnimation { duration: 140 } } }
                 contentItem: Column {
                     spacing: 0
                     anchors.centerIn: parent
@@ -202,8 +252,9 @@ ApplicationWindow {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: taskbar.top
         anchors.bottomMargin: 10
-        color: "#f21b202b"
-        border.color: "#66708094"
+        color: "#bd1b2637"
+        border.color: "#88b5c8df"
+        Rectangle { anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 1; height: 1; radius: 1; color: "#55ffffff" }
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: 22
@@ -218,7 +269,7 @@ ApplicationWindow {
                     start.visible = false
                     text = ""
                 }
-                background: Rectangle { radius: 9; color: "#ff111722"; border.color: "#667d8da7" }
+                background: Rectangle { radius: 9; color: "#bb111722"; border.color: "#88a8c6e8" }
             }
             RowLayout {
                 Layout.fillWidth: true
@@ -307,8 +358,9 @@ ApplicationWindow {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
         anchors.topMargin: 24
-        color: "#f21b202b"
-        border.color: "#66708094"
+        color: "#bd1b2637"
+        border.color: "#88b5c8df"
+        Rectangle { anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 1; height: 1; radius: 1; color: "#55ffffff" }
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: 10
@@ -322,7 +374,7 @@ ApplicationWindow {
                     search.visible = false
                     text = ""
                 }
-                background: Rectangle { radius: 9; color: "#ff111722"; border.color: "#667d8da7" }
+                background: Rectangle { radius: 9; color: "#bb111722"; border.color: "#88a8c6e8" }
             }
             Label { text: "Try: firefox  •  gimp  •  vlc  •  flatpak run org.mozilla.firefox"; color: "white"; font.pixelSize: 11 }
         }
@@ -338,8 +390,9 @@ ApplicationWindow {
         anchors.bottom: taskbar.top
         anchors.rightMargin: 18
         anchors.bottomMargin: 10
-        color: "#f21b202b"
-        border.color: "#66708094"
+        color: "#bd1b2637"
+        border.color: "#88b5c8df"
+        Rectangle { anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 1; height: 1; radius: 1; color: "#55ffffff" }
         Column {
             anchors.fill: parent
             anchors.margins: 16
@@ -352,7 +405,7 @@ ApplicationWindow {
                 text: shellController.clipboardText
                 color: "white"
                 wrapMode: TextEdit.Wrap
-                background: Rectangle { color: "#ff0d1017"; radius: 10 }
+                background: Rectangle { color: "#bb0d1017"; radius: 10; border.color: "#557d91ad" }
             }
             Row {
                 spacing: 8
@@ -373,8 +426,9 @@ ApplicationWindow {
         anchors.bottom: taskbar.top
         anchors.rightMargin: 18
         anchors.bottomMargin: 10
-        color: "#f21b202b"
-        border.color: "#66708094"
+        color: "#bd1b2637"
+        border.color: "#88b5c8df"
+        Rectangle { anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 1; height: 1; radius: 1; color: "#55ffffff" }
         Column {
             anchors.fill: parent
             anchors.margins: 16

@@ -72,14 +72,144 @@ bool WinuxCompositor::launchApplication(const QString &name){
 void WinuxCompositor::minimizeActive(){if(!m_active||!m_active->item())return;m_active->setMinimized(true);m_active->item()->setVisible(false);m_active=nullptr;emit windowListChanged();}
 void WinuxCompositor::restoreWindow(int i){if(i<0||i>=m_windows.size())return;auto *w=m_windows[i];w->setMinimized(false);w->item()->setVisible(w->workspace()==m_activeWorkspace);activate(w);emit windowListChanged();}
 void WinuxCompositor::closeActive(){if(m_active&&m_active->topLevel())m_active->topLevel()->sendClose();}
-void WinuxCompositor::maximizeActive(){if(!m_active||!m_active->item()||!m_active->topLevel())return;auto *item=m_active->item();if(m_active->topLevel()->maximized()){m_active->restoreGeometry();m_active->topLevel()->sendUnmaximized(QSize());}else{m_active->saveGeometry();item->setX(0);item->setY(0);item->setWidth(m_window.width());item->setHeight(m_window.height()-86);m_active->topLevel()->sendMaximized(QSize(item->width(),item->height()));}emit windowListChanged();}
-void WinuxCompositor::toggleFullscreenActive(){if(!m_active||!m_active->item()||!m_active->topLevel())return;if(m_active->topLevel()->fullscreen())m_active->topLevel()->sendUnmaximized(QSize());else m_active->topLevel()->sendFullscreen(QSize(m_window.width(),m_window.height()));}
+void WinuxCompositor::maximizeActive() {
+    if (!m_active || !m_active->item() || !m_active->topLevel())
+        return;
+    auto *item = m_active->item();
+    if (m_active->topLevel()->maximized()) {
+        m_active->restoreGeometry();
+        const QSize size(qMax(1, qRound(item->width())), qMax(1, qRound(item->height())));
+        m_active->topLevel()->sendUnmaximized(size);
+    } else {
+        m_active->saveGeometry();
+        const int width = qMax(1, m_window.width());
+        const int height = qMax(120, m_window.height() - 86);
+        item->setX(0);
+        item->setY(0);
+        item->setWidth(width);
+        item->setHeight(height);
+        m_active->topLevel()->sendMaximized(QSize(width, height));
+    }
+    emit windowListChanged();
+}
+void WinuxCompositor::toggleFullscreenActive() {
+    if (!m_active || !m_active->item() || !m_active->topLevel())
+        return;
+    auto *item = m_active->item();
+    if (m_active->topLevel()->fullscreen()) {
+        m_active->restoreGeometry();
+        const QSize size(qMax(1, qRound(item->width())), qMax(1, qRound(item->height())));
+        m_active->topLevel()->sendUnmaximized(size);
+    } else {
+        m_active->saveGeometry();
+        const int width = qMax(1, m_window.width());
+        const int height = qMax(1, m_window.height());
+        item->setX(0);
+        item->setY(0);
+        item->setWidth(width);
+        item->setHeight(height);
+        m_active->topLevel()->sendFullscreen(QSize(width, height));
+    }
+    emit windowListChanged();
+}
 void WinuxCompositor::snapActive(const QString &side){if(!m_active||!m_active->item()||!m_active->topLevel())return;auto *i=m_active->item();m_active->saveGeometry();const qreal w=m_window.width()/2.0;if(side=="left"){i->setX(0);i->setY(0);i->setWidth(w);i->setHeight(m_window.height()-86);}else if(side=="right"){i->setX(w);i->setY(0);i->setWidth(w);i->setHeight(m_window.height()-86);}else return;m_active->topLevel()->sendConfigure(QSize(i->width(),i->height()),QList<QWaylandXdgToplevel::State>{QWaylandXdgToplevel::ActivatedState});emit windowListChanged();}
 void WinuxCompositor::moveActive(int dx,int dy){if(!m_active||!m_active->item())return;auto *i=m_active->item();i->setX(qBound(0.0,i->x()+dx,double(m_window.width()-i->width())));i->setY(qBound(0.0,i->y()+dy,double(m_window.height()-i->height())));emit windowListChanged();}
 void WinuxCompositor::resizeActive(int dw,int dh){if(!m_active||!m_active->item())return;auto *i=m_active->item();i->setWidth(qMax(200.0,i->width()+dw));i->setHeight(qMax(120.0,i->height()+dh));m_active->topLevel()->sendResizing(QSize(i->width(),i->height()));emit windowListChanged();}
-void WinuxCompositor::onNewToplevel(QWaylandXdgToplevel *t,QWaylandXdgSurface *s){Q_UNUSED(s);auto *w=new WindowSurface(t,this);m_windows.push_back(w);if(!m_window.isVisible())return;auto *item=new QWaylandQuickShellSurfaceItem(m_window.contentItem());item->setShellSurface(t->xdgSurface());item->setFocusOnClick(true);item->setAutoCreatePopupItems(true);item->setInputEventsEnabled(true);w->setItem(item);item->setZ(m_nextZ++);item->setX((m_window.width()-800)/2);item->setY((m_window.height()-600)/2);item->setWidth(800);item->setHeight(600);connect(t,&QObject::destroyed,this,&WinuxCompositor::onToplevelDestroyed);connect(t,&QWaylandXdgToplevel::activatedChanged,this,[this,w]{if(w->topLevel()&&w->topLevel()->activated())activate(w);});emit windowAdded(w);emit windowListChanged();activate(w);}
+void WinuxCompositor::onNewToplevel(QWaylandXdgToplevel *t, QWaylandXdgSurface *s) {
+    Q_UNUSED(s);
+    auto *w = new WindowSurface(t, this);
+    m_windows.push_back(w);
+    if (!m_window.isVisible()) {
+        qWarning() << "WINUX11 compositor window is not visible; cannot place client surface";
+        return;
+    }
+
+    auto *item = new QWaylandQuickShellSurfaceItem(m_window.contentItem());
+    item->setShellSurface(t->xdgSurface());
+    item->setFocusOnClick(true);
+    item->setAutoCreatePopupItems(true);
+    item->setInputEventsEnabled(true);
+    w->setItem(item);
+    item->setZ(m_nextZ++);
+
+    // The desktop shell is the compositor's root surface. Give it the full
+    // output geometry up front; relying on a later fullscreen request leaves
+    // it centered at the fallback size on nested/software-rendered backends.
+    const bool isShellSurface = !m_shellSurfaceAssigned ||
+        t->title().compare(QStringLiteral("WINUX11 Shell"), Qt::CaseInsensitive) == 0 ||
+        t->appId().contains(QStringLiteral("winux11-shell"), Qt::CaseInsensitive);
+    if (isShellSurface)
+        m_shellSurfaceAssigned = true;
+    const int initialWidth = isShellSurface
+        ? qMax(1, m_window.width())
+        : qBound(320, m_window.width() * 2 / 3, 1280);
+    const int initialHeight = isShellSurface
+        ? qMax(1, m_window.height())
+        : qBound(240, m_window.height() * 2 / 3, 900);
+    item->setX(isShellSurface ? 0 : qMax(0, (m_window.width() - initialWidth) / 2));
+    item->setY(isShellSurface ? 0 : qMax(0, (m_window.height() - initialHeight) / 2));
+    item->setWidth(initialWidth);
+    item->setHeight(initialHeight);
+
+    connect(w, &WindowSurface::titleChanged, this, [this, w] {
+        if (!w->topLevel() || !w->item() ||
+            w->title().compare(QStringLiteral("WINUX11 Shell"), Qt::CaseInsensitive) != 0)
+            return;
+        m_shellSurfaceAssigned = true;
+        const int width = qMax(1, m_window.width());
+        const int height = qMax(1, m_window.height());
+        w->item()->setX(0);
+        w->item()->setY(0);
+        w->item()->setWidth(width);
+        w->item()->setHeight(height);
+        w->topLevel()->sendConfigure(QSize(width, height),
+                                     QList<QWaylandXdgToplevel::State>{QWaylandXdgToplevel::ActivatedState});
+        emit windowListChanged();
+    });
+    connect(t, &QObject::destroyed, this, &WinuxCompositor::onToplevelDestroyed);
+    connect(t, &QWaylandXdgToplevel::activatedChanged, this, [this, w] {
+        if (w->topLevel() && w->topLevel()->activated())
+            activate(w);
+    });
+    emit windowAdded(w);
+    emit windowListChanged();
+    activate(w);
+}
 void WinuxCompositor::onToplevelDestroyed(){for(int i=m_windows.size()-1;i>=0;--i){if(!m_windows[i]->topLevel()){auto *r=m_windows.takeAt(i);if(m_active==r)m_active=nullptr;emit windowRemoved(r);r->deleteLater();}}emit windowListChanged();}
-void WinuxCompositor::activate(WindowSurface *w){if(!w||!w->topLevel()||w->workspace()!=m_activeWorkspace||w->minimized())return;if(m_active==w){if(w->item())w->item()->setZ(m_nextZ++);return;}if(m_active&&m_active->topLevel())m_active->topLevel()->sendConfigure(QSize(),QList<QWaylandXdgToplevel::State>{});m_active=w;if(w->item())w->item()->setZ(m_nextZ++);if(m_seat&&w->topLevel()->xdgSurface()&&w->topLevel()->xdgSurface()->surface())m_seat->setKeyboardFocus(w->topLevel()->xdgSurface()->surface());w->topLevel()->sendConfigure(QSize(),QList<QWaylandXdgToplevel::State>{QWaylandXdgToplevel::ActivatedState});emit activeWindowChanged(w);emit windowListChanged();}
+void WinuxCompositor::activate(WindowSurface *w) {
+    if (!w || !w->topLevel() || w->workspace() != m_activeWorkspace || w->minimized())
+        return;
+    if (m_active == w) {
+        if (w->item())
+            w->item()->setZ(m_nextZ++);
+        return;
+    }
+
+    // XDG configure sizes must be positive. QSize() is {-1,-1} and causes
+    // Qt Wayland clients to reject the configure, leaving the shell tiny or unusable.
+    if (m_active && m_active->topLevel()) {
+        const auto *item = m_active->item();
+        const QSize oldSize = item
+            ? QSize(qMax(1, qRound(item->width())), qMax(1, qRound(item->height())))
+            : QSize(1280, 720);
+        m_active->topLevel()->sendConfigure(oldSize, QList<QWaylandXdgToplevel::State>{});
+    }
+
+    m_active = w;
+    if (w->item())
+        w->item()->setZ(m_nextZ++);
+    if (m_seat && w->topLevel()->xdgSurface() && w->topLevel()->xdgSurface()->surface())
+        m_seat->setKeyboardFocus(w->topLevel()->xdgSurface()->surface());
+
+    const auto *item = w->item();
+    const QSize size = item
+        ? QSize(qMax(1, qRound(item->width())), qMax(1, qRound(item->height())))
+        : QSize(1280, 720);
+    w->topLevel()->sendConfigure(size,
+                                  QList<QWaylandXdgToplevel::State>{QWaylandXdgToplevel::ActivatedState});
+    emit activeWindowChanged(w);
+    emit windowListChanged();
+}
 void WinuxCompositor::activateIndex(int index){if(index<0||index>=m_windows.size())return;activate(m_windows[index]);}
 void WinuxCompositor::moveWorkspace(WindowSurface *w,int ws){if(!w||!w->item()||ws<0)return;w->setWorkspace(ws);w->item()->setVisible(ws==m_activeWorkspace&&!w->minimized());emit windowListChanged();}
 void WinuxCompositor::setWorkspace(int ws){if(ws<0||ws==m_activeWorkspace)return;m_activeWorkspace=ws;m_active=nullptr;if(m_seat)m_seat->setKeyboardFocus(nullptr);for(auto *w:m_windows)if(w->item())w->item()->setVisible(w->workspace()==ws&&!w->minimized());for(auto *w:m_windows)if(w->workspace()==ws&&!w->minimized()){activate(w);break;}emit workspaceChanged(ws);emit windowListChanged();}
