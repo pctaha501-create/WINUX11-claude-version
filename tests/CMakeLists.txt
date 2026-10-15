@@ -17,3 +17,11 @@ add_test(NAME winux11-path-test COMMAND winux11-path-test)
 add_executable(winux11-wine-test wine_manager_test.cpp)
 target_link_libraries(winux11-wine-test PRIVATE Qt6::Core winux11-compatibility)
 add_test(NAME winux11-wine-test COMMAND winux11-wine-test)
+
+add_executable(win-to-linux-distro-test linux_distro_detector_test.cpp)
+target_link_libraries(win-to-linux-distro-test PRIVATE Qt6::Core winux11-services)
+add_test(NAME win-to-linux-distro-test COMMAND win-to-linux-distro-test)
+
+add_executable(win-to-linux-package-adapter-test package_manager_adapter_test.cpp)
+target_link_libraries(win-to-linux-package-adapter-test PRIVATE Qt6::Core winux11-services)
+add_test(NAME win-to-linux-package-adapter-test COMMAND win-to-linux-package-adapter-test)

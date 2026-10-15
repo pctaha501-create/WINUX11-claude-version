@@ -1,54 +1,45 @@
-# WINUX11
+# Win-To-Linux
 
-WINUX11 is an independent Linux desktop environment built from zero around Wayland, Qt 6, QML and Linux system APIs. It targets a polished Windows-11-like workflow without copying Windows code or another WINUX11 implementation.
+Win-To-Linux is a Linux desktop environment and toolset inspired by the familiar workflow of Windows 11. It is built with C++20, Qt 6, QML, CMake, and Linux system APIs. It aims to preserve native Linux capabilities; it is not a replacement Linux kernel or a Windows kernel emulator.
 
-Architecture: Linux → Wayland → WINUX11 compositor → WINUX11 shell → system services → applications.
-
-The compositor is a real Qt Wayland compositor. It creates an XDG shell, a Wayland output, and QWaylandQuickShellSurfaceItem instances for client surfaces, while the shell is rendered in the compositor's Qt Quick scene.
-
-Core applications are real Linux/Qt processes rather than mock data. Missing capabilities are reported instead of being treated as success.
+The current repository retains its historical GitHub name, WINUX11-claude-version. The repository name has not been changed.
 
 ## Build and test
 
 Install the Qt 6, Qt Wayland, CMake, Ninja, and compiler development packages for your distribution, then run:
 
-```sh
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel 2
-ctest --test-dir build --output-on-failure
-sudo cmake --install build --prefix /usr
-```
+    cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+    cmake --build build --parallel 2
+    ctest --test-dir build --output-on-failure
+    sudo cmake --install build --prefix /usr
 
-The CI workflow validates QML syntax, compiles the project, runs tests, verifies installed files, and starts a session smoke test.
+## Linux Mode
 
-## Native Linux applications and tools
+The System information view reports the host distribution using /etc/os-release and classifies common distro families. The package service builds separate argument-array commands for apt/apt-get, dnf/yum, pacman, and zypper. Unknown distributions or unavailable managers fail safely rather than silently invoking apt. See docs/linux-mode.md.
 
-WINUX11 runs native Linux applications. Use the Terminal for standard Linux commands and development tools, or install packages through Software Center. From the Start search, enter an executable name such as `firefox`, `gimp`, or `vlc`; if it is installed and on `PATH`, WINUX11 can launch it directly. Flatpak commands such as `flatpak run org.mozilla.firefox` can also be entered in search when Flatpak is installed.
+The adapter tests validate command construction, not real package transactions. The existing GUI invokes install/remove only when a user activates the Software Center controls; package operations may still fail because of repository state, permissions, network access, or distro-specific package naming. No package changes occur automatically during startup.
 
-## Windows applications
+## Native Linux applications
 
-Windows desktop programs are supported through Wine compatibility, not by running the Windows kernel. Install Wine from Software Center, then use Files to open an `.exe` program or an `.msi` installer. Compatibility depends on the specific program, its version, drivers, and extra runtime components. Some programs will need additional setup or will not work; no Wine-based Linux desktop can guarantee that every Windows app runs without errors. For important software, test the exact application and version before relying on it.
+The existing application targets are native Linux processes. An application is available only if the executable is installed and reachable in the current environment; a UI entry alone is not proof that an external program exists.
 
-## Recover the graphical login
+## Windows application compatibility
 
-If the graphical login/display manager is stuck, switch to a text console with **Ctrl+Alt+F3**, sign in, and run:
+The project contains Wine-related compatibility code, but support depends on the exact Windows program, version, architecture, and runtime dependencies. It cannot guarantee that every .exe or .msi application works.
 
-```sh
-Winux11
-```
+## Graphical-session diagnostics
 
-The command restarts the display manager and can close any graphical sessions, so run it from a TTY when recovering a missing GUI. If it fails, inspect the service with `systemctl status display-manager gdm3` and review the session log at `~/.local/state/winux11/session.log` where available.
+The earlier project history recorded a failure where the shell could not connect to the target Wayland display even though the launcher had seen a socket path. A socket file alone is insufficient proof of readiness: verify a live listener and a successful connection before changing the login manager or default session. The Winux11 recovery helper may restart the display manager and close graphical sessions; use it only from a recovery TTY when appropriate.
 
-The ISO is intentionally a later stage; the desktop/session must mature before image construction.
+## Current milestone
 
+- [x] Read-only distro metadata parsing and family classification.
+- [x] Detect whether a family-appropriate package-manager executable is present.
+- [x] Safe generic fallback for unknown or missing distro metadata.
+- [x] Distro-specific package command construction with argument arrays.
+- [x] Automated tests for distro detection and package command plans.
+- [ ] Confirm graphical-session startup and live Wayland connection.
+- [ ] Validate real package transactions on each target distribution.
+- [ ] Add distro-specific CI/build packaging matrix and interactive GUI validation.
 
-## Install WINUX11
-
-The installer configures, builds, runs the automated tests, and installs the session entries and applications. It uses two build jobs by default to keep memory use moderate:
-
-```sh
-sh installer/install.sh
-```
-
-Installing into `/usr` asks for sudo only at the installation step. The installer does not automatically download build dependencies; on Ubuntu, install the package list printed by the script if CMake reports missing Qt modules. To also install Wine (a large optional dependency) on Ubuntu/Debian, run `WINUX11_INSTALL_WINE=1 sh installer/install.sh`.
-
+The project remains under development; unchecked items are not represented as complete.
