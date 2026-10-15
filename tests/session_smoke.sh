@@ -2,10 +2,12 @@
 set -eu
 root="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 runtime="$(mktemp -d)"
-cleanup() { rm -rf "$runtime"; }
+state="$(mktemp -d)"
+cleanup() { rm -rf "$runtime" "$state"; }
 trap cleanup EXIT INT TERM
 export XDG_RUNTIME_DIR="$runtime"
-chmod 700 "$runtime"
+export XDG_STATE_HOME="$state"
+chmod 700 "$runtime" "$state"
 export WINUX11_WAYLAND_DISPLAY="wayland-winux11-smoke"
 unset WAYLAND_DISPLAY
 export WINUX11_PREFIX="${WINUX11_PREFIX:-$root/build-smoke/root}"
@@ -15,5 +17,9 @@ set +e
 timeout 10s xvfb-run -a env QT_QPA_PLATFORM=xcb sh "$root/session/winux11-session"
 rc=$?
 set -e
-[ "$rc" -eq 124 ] || [ "$rc" -eq 0 ] || { echo "WINUX11 smoke: session exited unexpectedly with $rc"; exit "$rc"; }
+if [ "$rc" -ne 124 ] && [ "$rc" -ne 0 ]; then
+    echo "WINUX11 smoke: session exited unexpectedly with $rc"
+    if [ -f "$state/winux11/session.log" ]; then tail -n 100 "$state/winux11/session.log"; fi
+    exit "$rc"
+fi
 echo "WINUX11 smoke: compositor/socket/session startup path completed"
