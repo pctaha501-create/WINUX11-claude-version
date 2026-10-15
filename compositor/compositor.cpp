@@ -163,7 +163,7 @@ void WinuxCompositor::onNewToplevel(QWaylandXdgToplevel *t, QWaylandXdgSurface *
         w->item()->setWidth(width);
         w->item()->setHeight(height);
         w->topLevel()->sendConfigure(QSize(width, height),
-                                     {QWaylandXdgToplevel::ActivatedState});
+                                     QList<QWaylandXdgToplevel::State>{QWaylandXdgToplevel::ActivatedState});
         emit windowListChanged();
     });
     connect(t, &QObject::destroyed, this, &WinuxCompositor::onToplevelDestroyed);
@@ -192,7 +192,7 @@ void WinuxCompositor::activate(WindowSurface *w) {
         const QSize oldSize = item
             ? QSize(qMax(1, qRound(item->width())), qMax(1, qRound(item->height())))
             : QSize(1280, 720);
-        m_active->topLevel()->sendConfigure(oldSize, {});
+        m_active->topLevel()->sendConfigure(oldSize, QList<QWaylandXdgToplevel::State>{});
     }
 
     m_active = w;
@@ -205,7 +205,8 @@ void WinuxCompositor::activate(WindowSurface *w) {
     const QSize size = item
         ? QSize(qMax(1, qRound(item->width())), qMax(1, qRound(item->height())))
         : QSize(1280, 720);
-    w->topLevel()->sendConfigure(size, {QWaylandXdgToplevel::ActivatedState});
+    w->topLevel()->sendConfigure(size,
+                                  QList<QWaylandXdgToplevel::State>{QWaylandXdgToplevel::ActivatedState});
     emit activeWindowChanged(w);
     emit windowListChanged();
 }
