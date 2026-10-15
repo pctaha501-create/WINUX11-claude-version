@@ -40,3 +40,15 @@ Winux11
 The command restarts the display manager and can close any graphical sessions, so run it from a TTY when recovering a missing GUI. If it fails, inspect the service with `systemctl status display-manager gdm3` and review the session log at `~/.local/state/winux11/session.log` where available.
 
 The ISO is intentionally a later stage; the desktop/session must mature before image construction.
+
+
+## Install WINUX11
+
+The installer configures, builds, runs the automated tests, and installs the session entries and applications. It uses two build jobs by default to keep memory use moderate:
+
+```sh
+sh installer/install.sh
+```
+
+Installing into `/usr` asks for sudo only at the installation step. The installer does not automatically download build dependencies; on Ubuntu, install the package list printed by the script if CMake reports missing Qt modules. To also install Wine (a large optional dependency) on Ubuntu/Debian, run `WINUX11_INSTALL_WINE=1 sh installer/install.sh`.
+
