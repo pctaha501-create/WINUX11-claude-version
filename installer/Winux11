@@ -1,0 +1,34 @@
+#!/bin/sh
+set -eu
+
+# Recovery helper for a missing WINUX11 graphical login. Run from a TTY
+# (Ctrl+Alt+F3); restarting the display manager closes graphical sessions.
+if ! command -v systemctl >/dev/null 2>&1; then
+    printf '%s\n' 'WINUX11: systemctl is not available; this command requires a systemd Linux host.' >&2
+    exit 2
+fi
+
+if [ "$(id -u)" -eq 0 ]; then
+    SUDO=
+else
+    if ! command -v sudo >/dev/null 2>&1; then
+        printf '%s\n' 'WINUX11: sudo is required to restart the display manager.' >&2
+        exit 2
+    fi
+    SUDO=sudo
+fi
+
+printf '%s\n' 'WINUX11: restarting the graphical login service...'
+if $SUDO systemctl restart display-manager.service; then
+    printf '%s\n' 'WINUX11: display manager restart requested.'
+    exit 0
+fi
+
+printf '%s\n' 'WINUX11: display-manager.service failed; trying GDM...'
+if $SUDO systemctl restart gdm3.service; then
+    printf '%s\n' 'WINUX11: GDM restart requested.'
+    exit 0
+fi
+
+printf '%s\n' 'WINUX11: could not restart the display manager. Check: systemctl status display-manager gdm3' >&2
+exit 1

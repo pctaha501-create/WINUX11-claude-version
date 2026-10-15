@@ -9,6 +9,7 @@ ApplicationWindow{
  property string clipboardPath:""
  property bool cutMode:false
  property string searchText:""
+ property string actionStatus:""
  property bool showingTrash:false
  property var history:[homePath]
  property int historyIndex:0
@@ -18,6 +19,14 @@ ApplicationWindow{
  function goForward(){if(historyIndex<history.length-1){showingTrash=false;historyIndex++;currentPath=history[historyIndex];refresh()}}
  function parentDir(){var p=currentPath.lastIndexOf("/");if(p>0)navigate(currentPath.slice(0,p))}
  function targetFor(name){return currentPath+"/"+name}
+ function openFile(path) {
+  var lower = path.toLowerCase()
+  if (lower.endsWith(".exe") || lower.endsWith(".msi")) {
+   actionStatus = wineManager.launch(path, [], "") ? "Started Windows app: " + path.split("/").pop() : "Could not launch Windows app. Install Wine in Software Center first."
+  } else {
+   actionStatus = filesystem.openPath(path) ? "Opening: " + path.split("/").pop() : "Could not open file."
+  }
+ }
  ColumnLayout{anchors.fill:parent;anchors.margins:12;spacing:10
   RowLayout{Layout.fillWidth:true
    Button{text:"←";enabled:!showingTrash&&historyIndex>0;onClicked:goBack()}
@@ -39,20 +48,20 @@ ApplicationWindow{
    Button{text:"Delete";visible:!showingTrash;enabled:selectedPath.length>0;onClicked:{filesystem.removePath(selectedPath);selectedPath="";refresh()}}
    CheckBox{id:hidden;text:"Hidden files";visible:!showingTrash;onToggled:refresh()}
    Item{Layout.fillWidth:true}
-   Label{text:selectedPath?selectedPath:"No selection";color: "white";elide:Text.ElideMiddle;Layout.preferredWidth:320}
+   Label{text:actionStatus.length>0?actionStatus:(selectedPath?selectedPath:"No selection");color: "white";elide:Text.ElideMiddle;Layout.preferredWidth:320}
   }
   ListView{id:list;Layout.fillWidth:true;Layout.fillHeight:true;clip:true
    delegate:ItemDelegate{
     width:list.width;text:modelData.name+(modelData.directory?"/":"")
     onClicked:selectedPath=modelData.path
-    onDoubleClicked:if(!showingTrash&&modelData.directory)navigate(modelData.path);else if(!showingTrash)filesystem.openPath(modelData.path)
+    onDoubleClicked:if(!showingTrash&&modelData.directory)navigate(modelData.path);else if(!showingTrash)openFile(modelData.path)
     contentItem:RowLayout{spacing:12
      Label{Layout.fillWidth:true;text:modelData.name+(modelData.directory?"/":"");color:"white"}
      Label{text:modelData.directory?"Folder":String(modelData.size)+" B";color: "white"}
      Label{text:Qt.formatDateTime(modelData.modified,"yyyy-MM-dd HH:mm");color: "white";Layout.preferredWidth:160}
     }
     Menu{id:context
-     MenuItem{text:"Open";enabled:!showingTrash;onTriggered:if(modelData.directory)navigate(modelData.path);else filesystem.openPath(modelData.path)}
+     MenuItem{text:"Open";enabled:!showingTrash;onTriggered:if(modelData.directory)navigate(modelData.path);else openFile(modelData.path)}
      MenuItem{text:"Copy";enabled:!showingTrash;onTriggered:{clipboardPath=modelData.path;cutMode=false}}
      MenuItem{text:"Cut";enabled:!showingTrash;onTriggered:{clipboardPath=modelData.path;cutMode=true}}
      MenuItem{text:"Rename";enabled:!showingTrash;onTriggered:{selectedPath=modelData.path;renameDialog.open()}}

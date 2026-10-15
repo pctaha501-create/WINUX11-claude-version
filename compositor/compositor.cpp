@@ -18,7 +18,7 @@ void WindowSurface::saveGeometry(){if(!m_item||m_hasSavedGeometry)return;m_saved
 void WindowSurface::restoreGeometry(){if(!m_item||!m_hasSavedGeometry)return;m_item->setX(m_savedGeometry.x());m_item->setY(m_savedGeometry.y());m_item->setWidth(m_savedGeometry.width());m_item->setHeight(m_savedGeometry.height());m_hasSavedGeometry=false;}
 WinuxCompositor::WinuxCompositor(QObject *p):QWaylandCompositor(p),m_xdgShell(this){
  connect(&m_xdgShell,&QWaylandXdgShell::toplevelCreated,this,&WinuxCompositor::onNewToplevel);
- m_window.setTitle("WINUX11");m_window.setColor(QColor("#090b10"));m_window.resize(1920,1080);m_window.setMouseGrabEnabled(true);m_window.installEventFilter(this);
+ m_window.setTitle("WINUX11");m_window.setColor(QColor("#090b10"));m_window.resize(1280,720);m_window.installEventFilter(this);
 }
 void WinuxCompositor::create(){
  if(m_initialized)return;m_initialized=true;QWaylandCompositor::create();
@@ -28,8 +28,9 @@ void WinuxCompositor::create(){
   QTimer::singleShot(3000,qApp,&QCoreApplication::quit);
   return;
  }
- m_output=new QWaylandOutput(this,&m_window);m_output->setSizeFollowsWindow(true);const QWaylandOutputMode mode(QSize(1920,1080),60000);
- m_output->addMode(mode,true);m_output->setCurrentMode(mode);m_output->setPhysicalSize(QSize(600,340));m_output->setScaleFactor(1);m_output->setManufacturer("WINUX11");m_output->setModel("WINUX11 Virtual Display");m_window.show();
+ m_window.showFullScreen();
+ m_output=new QWaylandOutput(this,&m_window);m_output->setSizeFollowsWindow(true);const QSize outputSize=m_window.size().isValid()?m_window.size():QSize(1280,720);const QWaylandOutputMode mode(outputSize,60000);
+ m_output->addMode(mode,true);m_output->setCurrentMode(mode);m_output->setPhysicalSize(QSize(340,190));m_output->setScaleFactor(1);m_output->setManufacturer("WINUX11");m_output->setModel("WINUX11 Virtual Display");
 }
 QWaylandQuickShellSurfaceItem *WinuxCompositor::windowAt(const QPointF &pos)const{for(int n=m_windows.size()-1;n>=0;--n){auto *w=m_windows[n];if(!w||w->minimized()||w->workspace()!=m_activeWorkspace||!w->item()||!w->item()->isVisible())continue;auto *item=w->item();if(item->contains(item->mapFromScene(pos)))return item;}return nullptr;}
 WindowSurface *WinuxCompositor::surfaceAt(const QPointF &pos)const{auto *item=windowAt(pos);if(!item)return nullptr;for(auto *w:m_windows)if(w&&w->item()==item)return w;return nullptr;}
@@ -44,7 +45,30 @@ bool WinuxCompositor::handlePointerEvent(QEvent *event){
 }
 bool WinuxCompositor::eventFilter(QObject *watched,QEvent *event){if(watched==&m_window){if(handlePointerEvent(event))return true;if(m_seat&&event->type()==QEvent::KeyPress){auto *k=static_cast<QKeyEvent*>(event);const auto mods=k->modifiers();if(mods.testFlag(Qt::ControlModifier)&&k->key()>=Qt::Key_F1&&k->key()<=Qt::Key_F4){setWorkspace(k->key()-Qt::Key_F1);return true;}if(mods.testFlag(Qt::AltModifier)&&k->key()==Qt::Key_Tab){if(!m_windows.isEmpty()){int start=m_active?m_windows.indexOf(m_active):-1;for(int n=1;n<=m_windows.size();++n){int i=(start+n)%m_windows.size();if(m_windows[i]->workspace()==m_activeWorkspace&&!m_windows[i]->minimized()){activateIndex(i);break;}}}return true;}if(mods.testFlag(Qt::MetaModifier)&&m_active){if(mods.testFlag(Qt::ShiftModifier)){if(k->key()==Qt::Key_Left){resizeActive(-40,0);return true;}if(k->key()==Qt::Key_Right){resizeActive(40,0);return true;}if(k->key()==Qt::Key_Up){resizeActive(0,-40);return true;}if(k->key()==Qt::Key_Down){resizeActive(0,40);return true;}}else{if(k->key()==Qt::Key_Left){snapActive("left");return true;}if(k->key()==Qt::Key_Right){snapActive("right");return true;}if(k->key()==Qt::Key_Up){maximizeActive();return true;}if(k->key()==Qt::Key_Down){minimizeActive();return true;}}}m_seat->sendFullKeyEvent(k);return true;}}return QWaylandCompositor::eventFilter(watched,event);}
 QVariantList WinuxCompositor::windowList()const{QVariantList out;for(auto *w:m_windows)if(w)out<<QVariant::fromValue(static_cast<QObject*>(w));return out;}
-bool WinuxCompositor::launchApplication(const QString &name){const QHash<QString,QString> apps{{"Terminal","winux11-terminal"},{"Files","winux11-explorer"},{"Settings","winux11-settings"},{"Task Manager","winux11-taskmanager"},{"Security Center","winux11-security"},{"Browser","winux11-browser"},{"Software Center","winux11-softwarecenter"},{"Network","winux11-network"},{"Downloader","winux11-downloader"},{"Archive Manager","winux11-archive"},{"Screenshot","winux11-screenshot"},{"Calculator","winux11-calculator"},{"Clock","winux11-clock"},{"Calendar","winux11-calendar"},{"Text Editor","winux11-editor"},{"Photos","winux11-photos"},{"Media Player","winux11-mediaplayer"},{"Music","winux11-music"},{"Camera","winux11-camera"},{"Voice Recorder","winux11-recorder"},{"Disk Management","winux11-systemtools disk"},{"Update Manager","winux11-systemtools updates"},{"Startup Apps","winux11-systemtools startup"},{"Printer Manager","winux11-systemtools printers"},{"Display Manager","winux11-systemtools display"},{"Sound Manager","winux11-systemtools sound"},{"Privacy Center","winux11-systemtools privacy"},{"Bluetooth Manager","winux11-systemtools bluetooth"},{"Wi-Fi Manager","winux11-systemtools wifi"}};auto it=apps.find(name.trimmed());if(it==apps.end()){for(auto i=apps.cbegin();i!=apps.cend();++i)if(i.key().compare(name.trimmed(),Qt::CaseInsensitive)==0){it=i;break;}}if(it==apps.end())return false;QStringList parts=it.value().split(' ',Qt::SkipEmptyParts);QString program=parts.takeFirst();if(!QFileInfo(program).isAbsolute()){QString resolved=QStandardPaths::findExecutable(program);if(resolved.isEmpty()){const QString prefix=qEnvironmentVariable("WINUX11_PREFIX");if(!prefix.isEmpty()){const QString candidate=QDir(prefix).filePath("bin/"+program);if(QFileInfo::exists(candidate)&&QFileInfo(candidate).isExecutable())resolved=candidate;}}if(!resolved.isEmpty())program=resolved;}return QProcess::startDetached(program,parts);}
+bool WinuxCompositor::launchApplication(const QString &name){
+ const QHash<QString,QString> apps{{"Terminal","winux11-terminal"},{"Files","winux11-explorer"},{"Settings","winux11-settings"},{"Task Manager","winux11-taskmanager"},{"Security Center","winux11-security"},{"Browser","winux11-browser"},{"Software Center","winux11-softwarecenter"},{"Network","winux11-network"},{"Downloader","winux11-downloader"},{"Archive Manager","winux11-archive"},{"Screenshot","winux11-screenshot"},{"Calculator","winux11-calculator"},{"Clock","winux11-clock"},{"Calendar","winux11-calendar"},{"Text Editor","winux11-editor"},{"Photos","winux11-photos"},{"Media Player","winux11-mediaplayer"},{"Music","winux11-music"},{"Camera","winux11-camera"},{"Voice Recorder","winux11-recorder"},{"Disk Management","winux11-systemtools disk"},{"Update Manager","winux11-systemtools updates"},{"Startup Apps","winux11-systemtools startup"},{"Printer Manager","winux11-systemtools printers"},{"Display Manager","winux11-systemtools display"},{"Sound Manager","winux11-systemtools sound"},{"Privacy Center","winux11-systemtools privacy"},{"Bluetooth Manager","winux11-systemtools bluetooth"},{"Wi-Fi Manager","winux11-systemtools wifi"}};
+ const QString request=name.trimmed();
+ auto it=apps.find(request);
+ if(it==apps.end()){for(auto i=apps.cbegin();i!=apps.cend();++i)if(i.key().compare(request,Qt::CaseInsensitive)==0){it=i;break;}}
+ QStringList parts;
+ if(it!=apps.end()) parts=it.value().split(' ',Qt::SkipEmptyParts);
+ else parts=QProcess::splitCommand(request);
+ if(parts.isEmpty())return false;
+ QString program=parts.takeFirst();
+ if(!QFileInfo(program).isAbsolute()){
+  QString resolved=QStandardPaths::findExecutable(program);
+  if(resolved.isEmpty()){
+   const QString prefix=qEnvironmentVariable("WINUX11_PREFIX");
+   if(!prefix.isEmpty()){
+    const QString candidate=QDir(prefix).filePath("bin/"+program);
+    if(QFileInfo(candidate).isExecutable())resolved=candidate;
+   }
+  }
+  if(resolved.isEmpty())return false;
+  program=resolved;
+ }else if(!QFileInfo(program).isExecutable())return false;
+ return QProcess::startDetached(program,parts);
+}
 void WinuxCompositor::minimizeActive(){if(!m_active||!m_active->item())return;m_active->setMinimized(true);m_active->item()->setVisible(false);m_active=nullptr;emit windowListChanged();}
 void WinuxCompositor::restoreWindow(int i){if(i<0||i>=m_windows.size())return;auto *w=m_windows[i];w->setMinimized(false);w->item()->setVisible(w->workspace()==m_activeWorkspace);activate(w);emit windowListChanged();}
 void WinuxCompositor::closeActive(){if(m_active&&m_active->topLevel())m_active->topLevel()->sendClose();}

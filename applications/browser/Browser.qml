@@ -25,6 +25,24 @@ ApplicationWindow{
    TextField{id:address;Layout.fillWidth:true;text:tabs.length?tabs[currentTab].url:"";selectByMouse:true;onAccepted:{var value=text;if(value.indexOf("://")<0)value="https://www.google.com/search?q="+encodeURIComponent(value);page.url=value;tabs[currentTab].url=value;tabsChanged()}}
    Button{text:bookmarks.includes(address.text)?"★":"☆";onClicked:toggleBookmark()}
   }
-  WebEngineView{id:page;Layout.fillWidth:true;Layout.fillHeight:true;url:tabs.length?tabs[currentTab].url:"https://www.qt.io";onUrlChanged:{if(tabs.length){tabs[currentTab].url=url.toString();address.text=url.toString();tabsChanged()}};onTitleChanged:{if(tabs.length){tabs[currentTab].title=title;tabsChanged()}}}
+  WebEngineView {
+    id: page
+    Layout.fillWidth: true
+    Layout.fillHeight: true
+    url: tabs.length ? tabs[currentTab].url : "https://www.qt.io"
+    onUrlChanged: {
+     if (tabs.length) {
+      tabs[currentTab].url = url.toString()
+      address.text = url.toString()
+      tabsChanged()
+     }
+    }
+    onTitleChanged: {
+     if (tabs.length) {
+      tabs[currentTab].title = title
+      tabsChanged()
+     }
+    }
+   }
  }
 }

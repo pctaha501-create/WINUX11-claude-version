@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=WINUX11
-Comment=WINUX11 Wayland desktop session
+Comment=WINUX11 desktop session (VirtualBox-compatible host backend)
 Exec=sh /usr/bin/winux11-session
 Type=Application
 DesktopNames=WINUX11

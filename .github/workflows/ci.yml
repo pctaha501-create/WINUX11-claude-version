@@ -12,29 +12,77 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          pkgs="build-essential cmake ninja-build pkg-config libxkbcommon-dev qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools qt6-wayland-dev qt6-wayland qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts qml6-module-qtwebengine"
+          pkgs="build-essential cmake ninja-build pkg-config libxkbcommon-dev qt6-base-dev qt6-declarative-dev qt6-webengine-dev qt6-wayland qt6-wayland-dev xvfb xauth qml6-module-qtqml-workerscript qml6-module-qtquick-templates qml6-module-qtquick-window qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts qml6-module-qtwebengine"
           sudo apt-get install --no-install-recommends -y $pkgs || {
             sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=15 update
             sudo apt-get install --no-install-recommends -y $pkgs
           }
-          test -f /usr/lib/x86_64-linux-gnu/qt6/plugins/wayland-graphics-integration-server/libqt-wayland-compositor-dmabuf-server-buffer.so
-      - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DWINUX11_BUILD_TESTS=ON
-      - name: QML lint
+          pkg-config --modversion Qt6Core
+      - name: Validate QML syntax
+        shell: bash
         run: |
-          find applications shell -name "*.qml" -print0 | xargs -0 /usr/lib/qt6/bin/qmllint -I /usr/lib/x86_64-linux-gnu/qt6/qml
+          status=0
+          while IFS= read -r -d '' file; do
+            set +e
+            output=$(/usr/lib/qt6/bin/qmlformat "$file" 2>&1)
+            result=$?
+            set -e
+            if [ "$result" -ne 0 ]; then
+              status=1
+              details=$(printf '%s\n' "$output" | tail -n 8 | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')
+              printf '::error file=%s,line=1::qmlformat failed with status %s: %s\n' "$file" "$result" "${details:-qmlformat failed}"
+            fi
+          done < <(find applications shell -name '*.qml' -print0)
+          exit "$status"
       - name: Build
-        run: cmake --build build --parallel
+        shell: bash
+        run: |
+          if ! cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DWINUX11_BUILD_TESTS=ON > configure.log 2>&1; then
+            tail -n 40 configure.log
+            details=$(tail -n 25 configure.log | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')
+            printf '::error::CMake configure failed: %s\n' "$details"
+            exit 1
+          fi
+          if ! cmake --build build --parallel 2 > build.log 2>&1; then
+            tail -n 40 build.log
+            details=$(tail -n 25 build.log | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')
+            printf '::error::CMake build failed: %s\n' "$details"
+            exit 1
+          fi
+          tail -n 20 build.log
       - name: Test
         run: ctest --test-dir build --output-on-failure
       - name: Install validation
         run: cmake --install build --prefix "$RUNNER_TEMP/winux11-root"
       - name: Validate session scripts
+        shell: bash
         run: |
-          sh -n session/winux11-session
-          sh -n installer/install.sh
-          test -x "$RUNNER_TEMP/winux11-root/bin/winux11-compositor"
-          test -x "$RUNNER_TEMP/winux11-root/bin/winux11-shell"
-          test -x "$RUNNER_TEMP/winux11-root/bin/winux11-calendar"
-          test -x "$RUNNER_TEMP/winux11-root/bin/winux11-session"
-          test -f "$RUNNER_TEMP/winux11-root/share/wayland-sessions/winux11.desktop"
+          set -eu
+          for script in session/winux11-session installer/install.sh installer/Winux11; do
+            if ! sh -n "$script"; then
+              printf '::error file=%s,line=1::Shell syntax validation failed\n' "$script"
+              exit 1
+            fi
+          done
+          for executable in winux11-compositor winux11-shell winux11-calendar winux11-session Winux11; do
+            path="$RUNNER_TEMP/winux11-root/bin/$executable"
+            if [ ! -x "$path" ]; then
+              printf '::error file=.github/workflows/ci.yml,line=1::Expected executable missing: %s\n' "$path"
+              exit 1
+            fi
+          done
+          for file in share/xsessions/winux11.desktop share/wayland-sessions/winux11-wayland.desktop; do
+            path="$RUNNER_TEMP/winux11-root/$file"
+            if [ ! -f "$path" ]; then
+              printf '::error file=.github/workflows/ci.yml,line=1::Expected session entry missing: %s\n' "$path"
+              exit 1
+            fi
+          done
+      - name: Smoke test installed applications
+        env:
+          WINUX11_PREFIX: ${{ runner.temp }}/winux11-root
+        run: xvfb-run -a sh tests/apps_smoke.sh
+      - name: Smoke test WINUX11 session startup
+        env:
+          WINUX11_PREFIX: ${{ runner.temp }}/winux11-root
+        run: sh tests/session_smoke.sh
