@@ -81,4 +81,4 @@ jobs:
       - name: Smoke test WINUX11 session startup
         env:
           WINUX11_PREFIX: ${{ runner.temp }}/winux11-root
-        run: tests/session_smoke.sh
+        run: sh tests/session_smoke.sh
