@@ -12,7 +12,10 @@ if ! command -v cmake >/dev/null 2>&1 || ! command -v ninja >/dev/null 2>&1; the
 fi
 
 printf '%s\n' 'WINUX11: configuring...'
-cmake -S "$root" -B "$build_dir" -G Ninja -DCMAKE_BUILD_TYPE=Release -DWINUX11_BUILD_TESTS=ON
+if ! cmake -S "$root" -B "$build_dir" -G Ninja -DCMAKE_BUILD_TYPE=Release -DWINUX11_BUILD_TESTS=ON; then
+    printf '%s\n' 'WINUX11: configuration failed. On Ubuntu, install the Qt packages listed above, including qt6-webengine-dev and the Qt Quick QML modules.' >&2
+    exit 1
+fi
 printf '%s\n' 'WINUX11: building...'
 cmake --build "$build_dir" --parallel "$jobs"
 printf '%s\n' 'WINUX11: running tests...'
