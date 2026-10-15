@@ -8,6 +8,10 @@ export XDG_CURRENT_DESKTOP=WINUX11
 export XDG_SESSION_DESKTOP=WINUX11
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 export PATH="$prefix/bin:$PATH"
+# A software scene graph avoids EGL/3D initialization failures in VirtualBox
+# and low-GPU environments. Users with a working accelerated stack can override
+# this with WINUX11_QT_QUICK_BACKEND=opengl.
+export QT_QUICK_BACKEND="${WINUX11_QT_QUICK_BACKEND:-software}"
 
 if [ -n "${WINUX11_LOG_FILE:-}" ]; then
     log_file="$WINUX11_LOG_FILE"
@@ -44,7 +48,7 @@ elif [ -n "$parent_wayland_display" ] && [ "$parent_wayland_display" != "$target
 else
     compositor_qpa=eglfs
 fi
-log "Starting compositor with QPA=$compositor_qpa, socket=$target_display, runtime=$XDG_RUNTIME_DIR"
+log "Starting compositor with QPA=$compositor_qpa, QT_QUICK_BACKEND=$QT_QUICK_BACKEND, socket=$target_display, runtime=$XDG_RUNTIME_DIR"
 
 if [ "$compositor_qpa" = wayland ]; then
     [ -n "$parent_wayland_display" ] && [ "$parent_wayland_display" != "$target_display" ] || fail "Wayland backend needs a host WAYLAND_DISPLAY different from the WINUX11 socket"
