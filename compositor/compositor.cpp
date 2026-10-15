@@ -116,9 +116,9 @@ void WinuxCompositor::onNewToplevel(QWaylandXdgToplevel *t, QWaylandXdgSurface *
     };
     applyWindowState();
     connect(t, &QWaylandXdgToplevel::fullscreenChanged, this,
-            [applyWindowState](bool) { applyWindowState(); });
+            [applyWindowState]() { applyWindowState(); });
     connect(t, &QWaylandXdgToplevel::maximizedChanged, this,
-            [applyWindowState](bool) { applyWindowState(); });
+            [applyWindowState]() { applyWindowState(); });
     connect(t, &QObject::destroyed, this, &WinuxCompositor::onToplevelDestroyed);
     connect(t, &QWaylandXdgToplevel::activatedChanged, this, [this, w] {
         if (w->topLevel() && w->topLevel()->activated())
