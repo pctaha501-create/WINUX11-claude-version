@@ -7,7 +7,7 @@ build_dir="${WINUX11_BUILD_DIR:-$root/build}"
 jobs="${WINUX11_BUILD_JOBS:-2}"
 
 if ! command -v cmake >/dev/null 2>&1 || ! command -v ninja >/dev/null 2>&1; then
-    printf '%s\n' 'WINUX11: CMake and Ninja are required. On Ubuntu: sudo apt install build-essential cmake ninja-build pkg-config qt6-base-dev qt6-declarative-dev qt6-wayland-dev qt6-wayland qml6-module-qtqml-workerscript qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts qml6-module-qtwebengine libxkbcommon-dev' >&2
+    printf '%s\n' 'WINUX11: CMake and Ninja are required. On Ubuntu: sudo apt install build-essential cmake ninja-build pkg-config qt6-base-dev qt6-declarative-dev qt6-wayland-dev qt6-wayland qml6-module-qtqml-workerscript qml6-module-qtquick-templates qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts qml6-module-qtwebengine libxkbcommon-dev' >&2
     exit 2
 fi
 
