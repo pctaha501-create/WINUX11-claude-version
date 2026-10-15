@@ -1,54 +1,48 @@
-# WINUX11
+# Win-To-Linux
 
-WINUX11 is an independent Linux desktop environment built from zero around Wayland, Qt 6, QML and Linux system APIs. It targets a polished Windows-11-like workflow without copying Windows code or another WINUX11 implementation.
+Win-To-Linux is a Linux desktop environment and toolset inspired by the familiar workflow of Windows 11. It is built with C++20, Qt 6, QML, CMake, and Linux system APIs. The product aims to preserve native Linux capabilities while providing a cohesive desktop experience; it is not a replacement Linux kernel or a Windows kernel emulator.
 
-Architecture: Linux → Wayland → WINUX11 compositor → WINUX11 shell → system services → applications.
+The current repository still has its historical GitHub name, WINUX11-claude-version. That repository name has not been changed.
 
-The compositor is a real Qt Wayland compositor. It creates an XDG shell, a Wayland output, and QWaylandQuickShellSurfaceItem instances for client surfaces, while the shell is rendered in the compositor's Qt Quick scene.
-
-Core applications are real Linux/Qt processes rather than mock data. Missing capabilities are reported instead of being treated as success.
+Architecture: Linux → Wayland compositor → desktop shell → system services → applications.
 
 ## Build and test
 
 Install the Qt 6, Qt Wayland, CMake, Ninja, and compiler development packages for your distribution, then run:
 
-```sh
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel 2
-ctest --test-dir build --output-on-failure
-sudo cmake --install build --prefix /usr
-```
+    cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+    cmake --build build --parallel 2
+    ctest --test-dir build --output-on-failure
+    sudo cmake --install build --prefix /usr
 
-The CI workflow validates QML syntax, compiles the project, runs tests, verifies installed files, and starts a session smoke test.
+The test suite includes service tests and a read-only Linux distribution detector test. A successful build or unit-test run does not, by itself, prove that the graphical session works on every compositor, GPU, or virtual machine.
 
-## Native Linux applications and tools
+## Linux Mode
 
-WINUX11 runs native Linux applications. Use the Terminal for standard Linux commands and development tools, or install packages through Software Center. From the Start search, enter an executable name such as `firefox`, `gimp`, or `vlc`; if it is installed and on `PATH`, WINUX11 can launch it directly. Flatpak commands such as `flatpak run org.mozilla.firefox` can also be entered in search when Flatpak is installed.
+The System information view reports the host distribution using /etc/os-release, classifies common distro families, and reports a package-manager executable only when it is found. Unknown distributions fall back to a generic mode. See docs/linux-mode.md.
 
-## Windows applications
+This is the detection foundation, not a claim that all package operations are already portable. The existing package service still has apt-specific install/remove behavior. Package installation, removal, updates, privilege escalation, and security-tool execution must remain separate explicit actions; detection alone does not run them.
 
-Windows desktop programs are supported through Wine compatibility, not by running the Windows kernel. Install Wine from Software Center, then use Files to open an `.exe` program or an `.msi` installer. Compatibility depends on the specific program, its version, drivers, and extra runtime components. Some programs will need additional setup or will not work; no Wine-based Linux desktop can guarantee that every Windows app runs without errors. For important software, test the exact application and version before relying on it.
+## Native Linux applications
 
-## Recover the graphical login
+WINUX11-era application targets currently run native Linux processes. The terminal can run standard Linux commands, and software launching depends on the requested executable being installed and available in the environment. A UI entry is not proof that an external program is installed.
 
-If the graphical login/display manager is stuck, switch to a text console with **Ctrl+Alt+F3**, sign in, and run:
+## Windows application compatibility
 
-```sh
-Winux11
-```
+The project contains Wine-related compatibility code, but support depends on the exact Windows program, version, architecture, and runtime dependencies. It cannot guarantee that every .exe or .msi application works.
 
-The command restarts the display manager and can close any graphical sessions, so run it from a TTY when recovering a missing GUI. If it fails, inspect the service with `systemctl status display-manager gdm3` and review the session log at `~/.local/state/winux11/session.log` where available.
+## Graphical-session diagnostics
 
-The ISO is intentionally a later stage; the desktop/session must mature before image construction.
+The earlier project history recorded a failure where the shell could not connect to the target Wayland display even though the launcher had seen a socket path. Treat the existence of a socket file as insufficient proof of readiness: verify a live listener and a successful connection before changing the login manager or default session. The Winux11 recovery helper may restart the display manager and close graphical sessions; use it only from a recovery TTY when appropriate.
 
+## Current milestone
 
-## Install WINUX11
+- [x] Read-only distro metadata parsing and family classification.
+- [x] Detect whether a family-appropriate package-manager executable is present.
+- [x] Safe generic fallback for unknown or missing distro metadata.
+- [x] Automated fixture-based tests for Ubuntu, Kali, Fedora, Arch, openSUSE, and unknown/missing cases.
+- [ ] Multi-distro package operations with explicit consent and safe process execution.
+- [ ] Reproducible graphical-session connection and startup verification.
+- [ ] Distro-specific build/package matrix and interactive GUI validation.
 
-The installer configures, builds, runs the automated tests, and installs the session entries and applications. It uses two build jobs by default to keep memory use moderate:
-
-```sh
-sh installer/install.sh
-```
-
-Installing into `/usr` asks for sudo only at the installation step. The installer does not automatically download build dependencies; on Ubuntu, install the package list printed by the script if CMake reports missing Qt modules. To also install Wine (a large optional dependency) on Ubuntu/Debian, run `WINUX11_INSTALL_WINE=1 sh installer/install.sh`.
-
+The repository is still under development; unchecked items are not represented as complete.
