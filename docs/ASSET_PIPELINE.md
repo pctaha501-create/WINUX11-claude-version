@@ -1,41 +1,31 @@
-# WINUX11 Asset Pipeline and Windows Visual Reference
+# WINUX11 asset and startup experience pipeline
 
-## Goal
+## Public repository policy
 
-Create a repeatable asset workflow for a high-fidelity Windows-11-like interface while keeping the public repository redistributable and builds reproducible.
+The public repository should contain original WINUX11 artwork, code, design tokens, and documentation. Do not commit a Windows ISO or extracted proprietary Windows system assets (including system fonts, wallpapers, icons, sounds, or binaries) unless redistribution is explicitly authorized.
 
-## Public assets
+## Windows reference media
 
-The repository may contain original SVG icons, original wallpapers, original QML animations, and assets whose license explicitly permits redistribution. Each third-party asset must have a recorded source URL and license in assets/ATTRIBUTIONS.md.
+Download official Windows installation media from Microsoft's Windows 11 download page: https://www.microsoft.com/software-download/windows11. Review the applicable license terms before using any extracted material. Keep the ISO and extracted reference assets local to the developer machine; do not upload them to this repository.
 
-## Local-only Microsoft reference assets
+## WINUX11 startup animation
 
-A developer may download a Windows ISO from Microsoft's official download page and inspect its contents locally for visual research. Do not upload the ISO or proprietary extracted files to the public GitHub repository. Keep local imports outside the Git worktree or in an ignored local directory such as .local-assets/. Include only a manifest and import scripts in Git. The import tool must refuse to copy files into tracked paths unless the user confirms that the files are licensed for redistribution.
+Create an original, lightweight animation using project-owned assets. Suggested sequence:
 
-## Suggested local inspection workflow
+1. Fade in the WINUX11 mark over a dark, softly illuminated background.
+2. Introduce moving light trails and a small amount of particle motion; avoid heavy full-screen effects.
+3. Display concise startup milestones only when the application/platform can observe them. Otherwise use an indeterminate progress treatment rather than fabricated percentages.
+4. Transition smoothly to the desktop without delaying the point at which the user can interact.
+5. Respect reduced-motion settings and provide a static fallback.
 
-1. Download the ISO directly from Microsoft: https://www.microsoft.com/software-download/windows11
-2. Verify the ISO's integrity using Microsoft's published hash when available.
-3. Mount/read the ISO without installing Windows.
-4. Inspect sources/install.wim or sources/install.esd using a suitable WIM/ESD reader. Do not modify the source image.
-5. Record candidate resource paths and screenshots in a local research manifest; avoid extracting entire Windows system trees unnecessarily.
-6. For each candidate asset, decide whether to recreate it as an original SVG/QML equivalent, use it only as a local reference, or include it only after confirming redistribution rights.
-7. Test theme rendering at 100%, 125%, and 150% scaling, plus dark/light variants and RTL layouts.
+## Desktop attribution
 
-## UI implementation principles
+A compact footer/status item may read `WINUX11 · Microsoft Windows · Linux · MMD Studio`. Use text or original vector artwork, keep contrast accessible, and make the footer unobtrusive. This is attribution, not a claim of official endorsement.
 
-- Prefer scalable SVG icons and consistent icon sizes/strokes over copied opaque binaries.
-- Use design tokens for colors, radii, spacing, elevation, typography, animation duration, and easing.
-- Animate opacity and transforms rather than expensive blur on low-end GPUs; provide reduced-motion and software-rendering fallbacks.
-- Ensure interactive elements have accessible labels, focus indicators, keyboard navigation, and tested actions.
-- Keep app identity and icon mapping in a registry so appearance profiles can swap desktop presentation without renaming or breaking executable paths.
-- Separate visual profile changes from the OS boot-mode switch.
+## Runtime constraints
 
-## Acceptance checklist
-
-- No unlicensed or untracked binary assets enter public commits.
-- Every visible icon maps to a real action or a clearly disabled capability.
-- QML loads under the supported Qt runtime and software-rendering fallback.
-- No invalid window sizes are sent to xdg_toplevel.
-- UI transitions respect reduced-motion settings and do not block the event loop.
-- Asset import, theme switching, and installation are covered by tests.
+- Windows is the default host and startup target.
+- Linux applications run through WSL2 or a documented virtualization backend.
+- Appearance switching is a live UI preference and must not reboot the machine.
+- Do not use a custom Linux compositor as the mandatory Windows login shell.
+- Validate cold boot time, idle resource use, fallback behavior, and theme-switch latency on real supported configurations.
