@@ -27,14 +27,17 @@ socket_ready=0
 shell_ready=0
 i=0
 while [ "$i" -lt 120 ]; do
-    if [ -S "$XDG_RUNTIME_DIR/$WINUX11_WAYLAND_DISPLAY" ]; then socket_ready=1; fi
+    if [ -S "$XDG_RUNTIME_DIR/$WINUX11_WAYLAND_DISPLAY" ] \
+        && awk -v path="$XDG_RUNTIME_DIR/$WINUX11_WAYLAND_DISPLAY" 'NR > 1 && $NF == path { found=1 } END { exit(found ? 0 : 1) }' /proc/net/unix; then
+        socket_ready=1
+    fi
     if [ -f "$WINUX11_LOG_FILE" ] && grep -q "Starting WINUX11 shell" "$WINUX11_LOG_FILE"; then shell_ready=1; break; fi
     if ! kill -0 "$runner_pid" 2>/dev/null; then break; fi
     sleep 0.05
     i=$((i + 1))
 done
 if [ "$socket_ready" -ne 1 ] || [ "$shell_ready" -ne 1 ]; then
-    echo "WINUX11 smoke: compositor socket or shell startup was not observed"
+    echo "WINUX11 smoke: live compositor socket or shell startup was not observed"
     if [ -f "$WINUX11_LOG_FILE" ]; then tail -n 120 "$WINUX11_LOG_FILE"; fi
     set +e
     wait "$runner_pid"
@@ -44,7 +47,7 @@ if [ "$socket_ready" -ne 1 ] || [ "$shell_ready" -ne 1 ]; then
     [ "$rc" -eq 124 ] || exit "$rc"
     exit 4
 fi
-echo "WINUX11 smoke: compositor socket ready and shell launch observed"
+echo "WINUX11 smoke: live compositor socket and shell launch observed"
 set +e
 wait "$runner_pid"
 rc=$?

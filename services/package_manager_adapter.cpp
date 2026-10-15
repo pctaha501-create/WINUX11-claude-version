@@ -1,5 +1,7 @@
 #include "package_manager_adapter.h"
 
+#include <utility>
+
 namespace {
 PackageCommand unsupported()
 {
@@ -38,11 +40,8 @@ PackageCommand PackageManagerAdapter::install(const LinuxDistroInfo &distro, con
         return unsupported();
 
     const QString &manager = distro.packageManager;
-    if (manager == QStringLiteral("apt-get"))
-        return command(QStringLiteral("pkexec"), {manager, QStringLiteral("install"), QStringLiteral("-y"), package}, 120000);
-    if (manager == QStringLiteral("apt"))
-        return command(QStringLiteral("pkexec"), {manager, QStringLiteral("install"), QStringLiteral("-y"), package}, 120000);
-    if (manager == QStringLiteral("dnf") || manager == QStringLiteral("yum"))
+    if (manager == QStringLiteral("apt-get") || manager == QStringLiteral("apt")
+        || manager == QStringLiteral("dnf") || manager == QStringLiteral("yum"))
         return command(QStringLiteral("pkexec"), {manager, QStringLiteral("install"), QStringLiteral("-y"), package}, 120000);
     if (manager == QStringLiteral("pacman"))
         return command(QStringLiteral("pkexec"), {manager, QStringLiteral("-S"), QStringLiteral("--noconfirm"), package}, 120000);
@@ -57,11 +56,8 @@ PackageCommand PackageManagerAdapter::remove(const LinuxDistroInfo &distro, cons
         return unsupported();
 
     const QString &manager = distro.packageManager;
-    if (manager == QStringLiteral("apt-get"))
-        return command(QStringLiteral("pkexec"), {manager, QStringLiteral("remove"), QStringLiteral("-y"), package}, 120000);
-    if (manager == QStringLiteral("apt"))
-        return command(QStringLiteral("pkexec"), {manager, QStringLiteral("remove"), QStringLiteral("-y"), package}, 120000);
-    if (manager == QStringLiteral("dnf") || manager == QStringLiteral("yum"))
+    if (manager == QStringLiteral("apt-get") || manager == QStringLiteral("apt")
+        || manager == QStringLiteral("dnf") || manager == QStringLiteral("yum"))
         return command(QStringLiteral("pkexec"), {manager, QStringLiteral("remove"), QStringLiteral("-y"), package}, 120000);
     if (manager == QStringLiteral("pacman"))
         return command(QStringLiteral("pkexec"), {manager, QStringLiteral("-R"), QStringLiteral("--noconfirm"), package}, 120000);

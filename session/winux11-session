@@ -31,6 +31,13 @@ exec >>"$log_file" 2>&1
 log() { printf '%s [WINUX11] %s\n' "$(date '+%Y-%m-%d %H:%M:%S' 2>/dev/null || printf 'time-unknown')" "$*"; }
 fail() { log "ERROR: $*"; printf 'WINUX11: %s\nLog: %s\n' "$*" "$log_file" >&4; exit 1; }
 
+# /proc/net/unix contains live kernel socket entries; unlike a filesystem
+# socket path alone, it does not report a stale socket left after a crash.
+socket_path_is_live() {
+    [ -r /proc/net/unix ] || return 2
+    awk -v path="$1" 'NR > 1 && $NF == path { found=1 } END { exit(found ? 0 : 1) }' /proc/net/unix
+}
+
 [ -d "$XDG_RUNTIME_DIR" ] || fail "XDG_RUNTIME_DIR is unavailable: $XDG_RUNTIME_DIR"
 [ -n "$target_display" ] || fail "WINUX11_WAYLAND_DISPLAY must not be empty"
 case "$target_display" in */*) fail "WINUX11_WAYLAND_DISPLAY must be a socket name, not a path" ;; esac
@@ -38,6 +45,18 @@ compositor="$prefix/bin/winux11-compositor"
 shell="$prefix/bin/winux11-shell"
 [ -x "$compositor" ] || fail "compositor is not installed at $compositor"
 [ -x "$shell" ] || fail "shell is not installed at $shell"
+
+socket_path="$XDG_RUNTIME_DIR/$target_display"
+if [ -S "$socket_path" ]; then
+    if socket_path_is_live "$socket_path"; then
+        fail "a live Wayland socket already uses $socket_path; refusing to replace it"
+    else
+        socket_probe_status=$?
+        [ "$socket_probe_status" -eq 1 ] || fail "cannot safely inspect existing socket $socket_path; refusing to remove it"
+        rm -f -- "$socket_path" || fail "could not remove stale socket path $socket_path"
+        log "Removed stale socket path after confirming no live kernel socket entry: $socket_path"
+    fi
+fi
 
 if [ -n "${WINUX11_COMPOSITOR_QPA_PLATFORM:-}" ]; then
     compositor_qpa="$WINUX11_COMPOSITOR_QPA_PLATFORM"
@@ -78,12 +97,19 @@ trap 'exit 143' TERM
 
 ready=0
 for i in $(seq 1 300); do
-    if [ -S "$XDG_RUNTIME_DIR/$target_display" ]; then ready=1; break; fi
     kill -0 "$compositor_pid" 2>/dev/null || fail "compositor exited before its Wayland socket became ready; inspect $log_file"
+    if [ -S "$socket_path" ] && socket_path_is_live "$socket_path"; then
+        ready=1
+        break
+    fi
     sleep 0.05
 done
-[ "$ready" -eq 1 ] || fail "Wayland socket did not become ready within 15 seconds: $XDG_RUNTIME_DIR/$target_display"
-log "Compositor socket is ready"
+[ "$ready" -eq 1 ] || fail "Wayland socket did not become live within 15 seconds: $socket_path"
+# Close the race where the compositor exits just after creating its socket.
+sleep 0.1
+kill -0 "$compositor_pid" 2>/dev/null || fail "compositor exited immediately after creating its Wayland socket; inspect $log_file"
+socket_path_is_live "$socket_path" || fail "Wayland socket disappeared before the shell could connect: $socket_path"
+log "Compositor process and live socket are ready"
 
 if [ "${WINUX11_HEADLESS_SMOKE:-0}" = 1 ]; then
     wait "$compositor_pid"
