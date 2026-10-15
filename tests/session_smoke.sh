@@ -6,7 +6,8 @@ cleanup() { rm -rf "$runtime"; }
 trap cleanup EXIT INT TERM
 export XDG_RUNTIME_DIR="$runtime"
 chmod 700 "$runtime"
-export WAYLAND_DISPLAY="wayland-winux11-smoke"
+export WINUX11_WAYLAND_DISPLAY="wayland-winux11-smoke"
+unset WAYLAND_DISPLAY
 export WINUX11_PREFIX="${WINUX11_PREFIX:-$root/build-smoke/root}"
 command -v xvfb-run >/dev/null 2>&1 || { echo "WINUX11 smoke: xvfb-run is required"; exit 2; }
 [ -x "$WINUX11_PREFIX/bin/winux11-compositor" ] && [ -x "$WINUX11_PREFIX/bin/winux11-shell" ] || { echo "WINUX11 smoke: installed binaries missing"; exit 3; }
