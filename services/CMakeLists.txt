@@ -1,6 +1,7 @@
 add_library(winux11-services STATIC
  command_runner.cpp command_runner.h system_info.cpp system_info.h
  linux_distro_detector.cpp linux_distro_detector.h
+ package_manager_adapter.cpp package_manager_adapter.h
  filesystem_service.cpp filesystem_service.h
  linux_capabilities.cpp linux_capabilities.h security_service.cpp security_service.h process_service.cpp process_service.h
  system_control_service.cpp system_control_service.h screenshot_service.cpp screenshot_service.h package_service.cpp package_service.h
