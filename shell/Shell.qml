@@ -22,9 +22,30 @@ ApplicationWindow {
         anchors.fill: parent
         gradient: Gradient {
             GradientStop { position: 0.0; color: "#111827" }
-            GradientStop { position: 0.52; color: "#0a1020" }
+            GradientStop { position: 0.48; color: "#0a1020" }
             GradientStop { position: 1.0; color: "#080b12" }
         }
+    }
+    Rectangle {
+        width: Math.min(root.width * 0.62, 900)
+        height: width
+        radius: width / 2
+        x: root.width * 0.42
+        y: root.height * 0.18
+        opacity: 0.18
+        gradient: Gradient {
+            GradientStop { position: 0; color: "#2563eb" }
+            GradientStop { position: 1; color: "#111827" }
+        }
+    }
+    Rectangle {
+        width: Math.min(root.width * 0.32, 480)
+        height: width
+        radius: width / 2
+        x: root.width * 0.58
+        y: root.height * 0.40
+        opacity: 0.12
+        color: "#38bdf8"
     }
 
     Column {
@@ -42,17 +63,18 @@ ApplicationWindow {
                 {label:"Software", command:"Software Center", glyph:"▦"}
             ]
             delegate: ToolButton {
-                width: 92
-                height: 76
-                display: AbstractButton.TextUnderIcon
-                text: modelData.label
-                icon.name: ""
+                width: 94
+                height: 78
                 onClicked: shellController.command("launch " + modelData.command)
-                background: Rectangle { color: parent.down ? "#334155" : (parent.hovered ? "#253246" : "transparent"); radius: 8; border.color: parent.hovered ? "#64748b" : "transparent" }
+                background: Rectangle {
+                    color: parent.down ? "#554f78a0" : (parent.hovered ? "#443b82b8" : "transparent")
+                    radius: 9
+                    border.color: parent.hovered ? "#6687a7c7" : "transparent"
+                }
                 contentItem: Column {
                     anchors.fill: parent
                     spacing: 5
-                    Label { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.glyph; color: "white"; font.pixelSize: 28 }
+                    Label { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.glyph; color: "white"; font.pixelSize: 29 }
                     Label { anchors.horizontalCenter: parent.horizontalCenter; text: modelData.label; color: "white"; font.pixelSize: 11; wrapMode: Text.Wrap; horizontalAlignment: Text.AlignHCenter }
                 }
             }
@@ -61,34 +83,101 @@ ApplicationWindow {
 
     Rectangle {
         id: taskbar
-        width: parent.width
-        height: 54
+        height: 64
+        anchors.left: parent.left
+        anchors.right: parent.right
         anchors.bottom: parent.bottom
-        color: "#20242b"
-        border.color: "#343947"
-        RowLayout {
-            anchors.fill: parent
-            anchors.leftMargin: 12
-            anchors.rightMargin: 12
-            spacing: 6
-            ToolButton { text: "☷"; font.pixelSize: 23; ToolTip.text: "Start"; onClicked: start.visible = !start.visible }
-            ToolButton { text: "⌕"; font.pixelSize: 22; ToolTip.text: "Search"; onClicked: search.visible = !search.visible }
-            Item { Layout.fillWidth: true }
+        color: "#e61b202a"
+        border.color: "#553f485a"
+        Rectangle {
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: 1
+            color: "#667b8ba3"
+        }
+        Row {
+            anchors.centerIn: parent
+            spacing: 5
+            ToolButton {
+                width: 46; height: 46
+                text: "⊞"
+                font.pixelSize: 29
+                ToolTip.text: "Start"
+                onClicked: { start.visible = !start.visible; search.visible = false }
+                background: Rectangle { radius: 10; color: parent.down ? "#5560a5fa" : (parent.hovered ? "#334c87b8" : "transparent") }
+            }
+            ToolButton {
+                width: 46; height: 46
+                text: "⌕"
+                font.pixelSize: 28
+                ToolTip.text: "Search"
+                onClicked: { search.visible = !search.visible; start.visible = false }
+                background: Rectangle { radius: 10; color: parent.down ? "#5560a5fa" : (parent.hovered ? "#334c87b8" : "transparent") }
+            }
+            Rectangle { width: 1; height: 30; anchors.verticalCenter: parent.verticalCenter; color: "#52607080" }
+            Repeater {
+                model: [
+                    {label:"Files", glyph:"▣", command:"Files"},
+                    {label:"Browser", glyph:"◎", command:"Browser"},
+                    {label:"Terminal", glyph:"›_", command:"Terminal"},
+                    {label:"Settings", glyph:"⚙", command:"Settings"},
+                    {label:"Task Manager", glyph:"▥", command:"Task Manager"}
+                ]
+                delegate: ToolButton {
+                    width: 46; height: 46
+                    text: modelData.glyph
+                    font.pixelSize: 22
+                    ToolTip.text: modelData.label
+                    onClicked: shellController.command("launch " + modelData.command)
+                    background: Rectangle {
+                        radius: 10
+                        color: parent.down ? "#5560a5fa" : (parent.hovered ? "#334c87b8" : "transparent")
+                        Rectangle { visible: parent.parent.hovered; width: 18; height: 3; radius: 2; color: "#60a5fa"; anchors.horizontalCenter: parent.horizontalCenter; anchors.bottom: parent.bottom; anchors.bottomMargin: 2 }
+                    }
+                }
+            }
             Repeater {
                 model: shellController.windows
                 delegate: ToolButton {
-                    Layout.maximumWidth: 180
-                    text: modelData.title || "Window"
+                    width: 48; height: 46
+                    text: "▰"
+                    ToolTip.text: modelData.title || "Open window"
                     onClicked: shellController.command("activate " + index)
+                    background: Rectangle { radius: 10; color: parent.hovered ? "#334c87b8" : "transparent" }
                 }
             }
-            Item { Layout.fillWidth: true }
-            ToolButton { text: "⌁"; ToolTip.text: "Quick settings"; onClicked: quick.visible = !quick.visible }
-            Column {
-                spacing: 0
-                Layout.alignment: Qt.AlignVCenter
-                Label { text: Qt.formatDateTime(root.clockNow, "HH:mm"); color: "white"; horizontalAlignment: Text.AlignHCenter }
-                Label { text: Qt.formatDateTime(root.clockNow, "ddd, dd MMM"); color: "white"; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter }
+        }
+        Row {
+            anchors.right: parent.right
+            anchors.rightMargin: 14
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 5
+            ToolButton {
+                width: 42; height: 42
+                text: "⌃"
+                ToolTip.text: "System tray"
+                onClicked: quick.visible = !quick.visible
+                background: Rectangle { radius: 9; color: parent.hovered ? "#334c87b8" : "transparent" }
+            }
+            ToolButton {
+                width: 48; height: 42
+                text: "◖"
+                ToolTip.text: "Quick settings"
+                onClicked: quick.visible = !quick.visible
+                background: Rectangle { radius: 9; color: parent.hovered ? "#334c87b8" : "transparent" }
+            }
+            ToolButton {
+                height: 46
+                width: 104
+                onClicked: { quick.visible = !quick.visible; start.visible = false }
+                background: Rectangle { radius: 9; color: parent.hovered ? "#334c87b8" : "transparent" }
+                contentItem: Column {
+                    spacing: 0
+                    anchors.centerIn: parent
+                    Label { text: Qt.formatDateTime(root.clockNow, "HH:mm"); color: "white"; horizontalAlignment: Text.AlignHCenter; width: 104 }
+                    Label { text: Qt.formatDateTime(root.clockNow, "dd/MM/yyyy"); color: "white"; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter; width: 104 }
+                }
             }
         }
     }
@@ -96,26 +185,35 @@ ApplicationWindow {
     Rectangle {
         id: start
         visible: false
-        width: 720
-        height: 520
-        radius: 16
+        width: Math.min(720, root.width - 40)
+        height: Math.min(610, root.height - taskbar.height - 24)
+        radius: 18
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: taskbar.top
-        anchors.bottomMargin: 8
-        color: "#171b24"
-        border.color: "#3b4352"
+        anchors.bottomMargin: 10
+        color: "#f21b202b"
+        border.color: "#66708094"
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: 22
-            spacing: 12
+            spacing: 14
             Label { text: "WINUX11"; font.pixelSize: 28; font.bold: true; color: "white" }
             TextField {
                 id: startSearch
                 Layout.fillWidth: true
-                placeholderText: "Search apps or Linux commands"
-                onAccepted: { shellController.command("launch " + text); start.visible = false; text = "" }
+                placeholderText: "Search apps, settings, or Linux commands"
+                onAccepted: {
+                    if (text.trim().length > 0) shellController.command("launch " + text.trim())
+                    start.visible = false
+                    text = ""
+                }
+                background: Rectangle { radius: 9; color: "#ff111722"; border.color: "#667d8da7" }
             }
-            Label { text: "Pinned"; color: "white"; font.bold: true; font.pixelSize: 17 }
+            RowLayout {
+                Layout.fillWidth: true
+                Label { text: "Pinned"; color: "white"; font.bold: true; font.pixelSize: 17; Layout.fillWidth: true }
+                Button { text: "All apps  ›"; onClicked: allApps.visible = !allApps.visible }
+            }
             GridLayout {
                 Layout.fillWidth: true
                 columns: 5
@@ -142,11 +240,28 @@ ApplicationWindow {
                 Button { text: "Camera"; onClicked: shellController.command("launch Camera") }
                 Button { text: "Voice Recorder"; onClicked: shellController.command("launch Voice Recorder") }
             }
+            Rectangle {
+                id: allApps
+                visible: false
+                Layout.fillWidth: true
+                Layout.preferredHeight: 92
+                radius: 10
+                color: "#ff111722"
+                border.color: "#334e5b70"
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    spacing: 7
+                    Label { text: "Linux commands"; color: "white"; font.bold: true }
+                    Label { text: "Enter an installed command above, for example: firefox, gimp, vlc, flatpak run org.mozilla.firefox"; color: "#e2e8f0"; wrapMode: Text.Wrap; width: parent.width }
+                }
+            }
             Item { Layout.fillHeight: true }
+            Rectangle { Layout.fillWidth: true; height: 1; color: "#334e5b70" }
             RowLayout {
                 Layout.fillWidth: true
-                Label { text: "Linux apps supported through native executables"; color: "#cbd5e1"; Layout.fillWidth: true }
-                Button { text: "Power"; onClicked: quick.visible = !quick.visible }
+                Label { text: "●  Local user"; color: "white"; Layout.fillWidth: true }
+                Button { text: "Power / session"; onClicked: quick.visible = !quick.visible }
             }
         }
     }
@@ -154,19 +269,30 @@ ApplicationWindow {
     Rectangle {
         id: search
         visible: false
-        width: 620
-        height: 82
+        width: Math.min(620, root.width - 40)
+        height: 94
         radius: 16
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
         anchors.topMargin: 24
-        color: "#171b24"
-        border.color: "#3b4352"
-        TextField {
+        color: "#f21b202b"
+        border.color: "#66708094"
+        ColumnLayout {
             anchors.fill: parent
             anchors.margins: 10
-            placeholderText: "Search installed apps or commands"
-            onAccepted: { shellController.command("launch " + text); search.visible = false; text = "" }
+            spacing: 5
+            TextField {
+                id: quickSearch
+                Layout.fillWidth: true
+                placeholderText: "Search installed apps or Linux commands"
+                onAccepted: {
+                    if (text.trim().length > 0) shellController.command("launch " + text.trim())
+                    search.visible = false
+                    text = ""
+                }
+                background: Rectangle { radius: 9; color: "#ff111722"; border.color: "#667d8da7" }
+            }
+            Label { text: "Try: firefox  •  gimp  •  vlc  •  flatpak run org.mozilla.firefox"; color: "#e2e8f0"; font.pixelSize: 11 }
         }
     }
 
@@ -180,8 +306,8 @@ ApplicationWindow {
         anchors.bottom: taskbar.top
         anchors.rightMargin: 18
         anchors.bottomMargin: 10
-        color: "#171b24"
-        border.color: "#3b4352"
+        color: "#f21b202b"
+        border.color: "#66708094"
         Column {
             anchors.fill: parent
             anchors.margins: 16
@@ -194,7 +320,7 @@ ApplicationWindow {
                 text: shellController.clipboardText
                 color: "white"
                 wrapMode: TextEdit.Wrap
-                background: Rectangle { color: "#0d1017"; radius: 10 }
+                background: Rectangle { color: "#ff0d1017"; radius: 10 }
             }
             Row {
                 spacing: 8
@@ -208,24 +334,32 @@ ApplicationWindow {
     Rectangle {
         id: quick
         visible: false
-        width: 300
-        height: 210
+        width: 330
+        height: 260
         radius: 18
         anchors.right: parent.right
         anchors.bottom: taskbar.top
         anchors.rightMargin: 18
         anchors.bottomMargin: 10
-        color: "#171b24"
-        border.color: "#3b4352"
+        color: "#f21b202b"
+        border.color: "#66708094"
         Column {
             anchors.fill: parent
             anchors.margins: 16
-            spacing: 9
-            Label { text: "Quick Settings"; color: "white"; font.pixelSize: 20 }
-            Button { text: "Network"; onClicked: shellController.command("launch Network") }
-            Button { text: "Sound"; onClicked: shellController.command("launch Sound Manager") }
-            Button { text: "Display"; onClicked: shellController.command("launch Display Manager") }
-            Label { text: "Ctrl+F1..F4 • Alt+Tab • Super+Arrows"; color: "white" }
+            spacing: 10
+            Label { text: "Quick Settings"; color: "white"; font.pixelSize: 21; font.bold: true }
+            GridLayout {
+                width: parent.width
+                columns: 2
+                rowSpacing: 8
+                columnSpacing: 8
+                Button { text: "Network"; Layout.fillWidth: true; onClicked: shellController.command("launch Network") }
+                Button { text: "Sound"; Layout.fillWidth: true; onClicked: shellController.command("launch Sound Manager") }
+                Button { text: "Display"; Layout.fillWidth: true; onClicked: shellController.command("launch Display Manager") }
+                Button { text: "Bluetooth"; Layout.fillWidth: true; onClicked: shellController.command("launch Bluetooth Manager") }
+            }
+            Label { text: "System tools open using the installed Linux desktop utilities."; color: "#e2e8f0"; wrapMode: Text.Wrap; width: parent.width }
+            Button { text: "Clipboard history"; onClicked: { clipboard.visible = !clipboard.visible; quick.visible = false } }
         }
     }
 }
